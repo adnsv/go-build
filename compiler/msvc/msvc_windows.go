@@ -22,7 +22,7 @@ const vswhereSubpath = "Microsoft Visual Studio/Installer/vswhere.exe"
 
 func DiscoverInstallations(feedback func(string)) ([]*Installation, error) {
 	if feedback != nil {
-		feedback("discovering MSVC installations")
+		feedback("discovering msvc installations")
 	}
 	paths := []string{}
 	addPath := func(s string) {
@@ -88,7 +88,7 @@ func DiscoverInstallations(feedback func(string)) ([]*Installation, error) {
 	})
 
 	if feedback != nil {
-		feedback(fmt.Sprintf("found %d msvc installation(s)\n", len(installations)))
+		feedback(fmt.Sprintf("found %d msvc installation(s)", len(installations)))
 	}
 
 	return installations, nil

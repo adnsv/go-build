@@ -84,7 +84,7 @@ func DiscoverInstallations(feedback func(string)) []*Installation {
 	})
 
 	if feedback != nil {
-		feedback(fmt.Sprintf("found %d clang installations", len(ret)))
+		feedback(fmt.Sprintf("found %d clang installation(s)", len(ret)))
 	}
 	return ret
 }
