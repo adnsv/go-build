@@ -3,6 +3,7 @@ package gcc
 import (
 	"errors"
 	"os/exec"
+	"path/filepath"
 	"regexp"
 	"strings"
 )
@@ -73,7 +74,7 @@ func ExtractIncludePaths(exe string, lang string) []string {
 				includeLine = false
 				continue
 			}
-			line = strings.TrimSpace(line)
+			line = filepath.ToSlash(strings.TrimSpace(line))
 			ret = append(ret, line)
 		} else if line == "#include <...> search starts here:" {
 			includeLine = true

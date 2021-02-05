@@ -3,6 +3,7 @@ package clang
 import (
 	"errors"
 	"os/exec"
+	"path/filepath"
 	"regexp"
 	"strings"
 
@@ -58,7 +59,7 @@ func QueryVersion(exe string) (*Ver, error) {
 		}
 		match = reInstalledDir.FindStringSubmatch(output)
 		if len(match) == 2 {
-			ret.InstalledDir = strings.TrimSpace(match[1])
+			ret.InstalledDir = filepath.ToSlash(strings.TrimSpace(match[1]))
 		}
 	}
 	ret.IncludeDirs = append(ret.IncludeDirs, gcc.ExtractIncludePaths(exe, "c")...)

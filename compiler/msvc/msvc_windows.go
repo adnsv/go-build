@@ -65,11 +65,16 @@ func DiscoverInstallations(feedback func(string)) ([]*Installation, error) {
 	if err != nil {
 		return nil, err
 	}
+	fmt.Printf("WSHERE: %s\n%s\n", cmd.String(), string(buf))
 
 	installations := []*Installation{}
 	err = json.Unmarshal(buf, &installations)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse vswhere output: %s", err)
+	}
+
+	for _, i := range installations {
+		i.InstallationPath = filepath.ToSlash(i.InstallationPath)
 	}
 
 	// sort, latest versions first

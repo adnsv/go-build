@@ -3,7 +3,6 @@ package toolchain
 import (
 	"fmt"
 	"io"
-	"path/filepath"
 )
 
 // Chain contains all the information discovered about a compiler
@@ -39,13 +38,13 @@ func (tc *Chain) PrintSummary(w io.Writer) {
 	cc := tc.Tools[CCompiler]
 	cxx := tc.Tools[CXXCompiler]
 	if cc == cxx {
-		fmt.Fprintf(w, "  - path: '%s'\n", filepath.FromSlash(cc))
+		fmt.Fprintf(w, "  - C/C++ path: '%s'\n", cc)
 	} else {
 		if cc != "" {
-			fmt.Fprintf(w, "  - C path: '%s'\n", filepath.FromSlash(cc))
+			fmt.Fprintf(w, "  - C path: '%s'\n", cc)
 		}
 		if cxx != "" {
-			fmt.Fprintf(w, "  - C++ path: '%s'\n", filepath.FromSlash(cxx))
+			fmt.Fprintf(w, "  - C++ path: '%s'\n", cxx)
 		}
 	}
 }
