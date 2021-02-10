@@ -2,7 +2,6 @@ package cmake
 
 import (
 	"io"
-	"os"
 	"os/exec"
 	"strings"
 )
@@ -36,9 +35,10 @@ type Builder struct {
 	Stdout   io.Writer
 	Stderr   io.Writer
 
-	SourceDir string
-	BuildDir  string
-	BuildType BuildType // injected as -DCMAKE_BUILD_TYPE:STRING=${BuildType}
+	SourceDir   string
+	BuildDir    string
+	BuildType   BuildType // injected as -DCMAKE_BUILD_TYPE:STRING=${BuildType}
+	BuildTarget string
 
 	GenerateFlags []string // -DVAR=VALUE pairs
 	BuildFlags    []string
@@ -113,6 +113,9 @@ func (b *Builder) EffectiveBuildArgs() []string {
 	args = append(args, "--build")
 	args = append(args, b.BuildDir)
 	args = append(args, "--config", b.BuildType.String())
+	if b.BuildTarget != "" {
+		args = append(args, "--target", b.BuildTarget)
+	}
 	args = append(args, "--parallel")
 	return args
 }
@@ -123,8 +126,11 @@ func (b *Builder) Generate() error {
 		c = "cmake"
 	}
 	cmd := exec.Command(c, b.EffectiveGenerateArgs()...)
+	//cmd := exec.Command(c, "--version")
 	cmd.Stdout = b.Stdout
 	cmd.Stderr = b.Stderr
+	//cmd.Stderr = cmd.StdoutPipe()
+
 	return cmd.Run()
 }
 
@@ -133,8 +139,8 @@ func (b *Builder) Build() error {
 	if c == "" {
 		c = "cmake"
 	}
-	cmd := exec.Command("cmake", b.EffectiveBuildArgs()...)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
+	cmd := exec.Command(c, b.EffectiveBuildArgs()...)
+	cmd.Stdout = b.Stdout
+	cmd.Stderr = b.Stderr
 	return cmd.Run()
 }
