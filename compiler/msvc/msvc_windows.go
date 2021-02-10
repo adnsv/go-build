@@ -65,7 +65,9 @@ func DiscoverInstallations(feedback func(string)) ([]*Installation, error) {
 	if err != nil {
 		return nil, err
 	}
-	fmt.Printf("WSHERE: %s\n%s\n", cmd.String(), string(buf))
+	if feedback != nil {
+		feedback(fmt.Sprintf("vswhere output: %s", string(buf)))
+	}
 
 	installations := []*Installation{}
 	err = json.Unmarshal(buf, &installations)
@@ -201,6 +203,9 @@ func TestArches(inst *Installation, feedback func(string)) []*toolchain.Chain {
 			return nil
 		}
 	}
+	if feedback != nil {
+		feedback(fmt.Sprintf("using devbat: %s", devbat))
+	}
 
 	targetArches := []string{"x86", "amd64", "arm", "arm64"}
 	hostArch := runtime.GOARCH
@@ -220,7 +225,7 @@ func TestArches(inst *Installation, feedback func(string)) []*toolchain.Chain {
 		wg.Add(1)
 		go func(i int, arch string) {
 			defer wg.Done()
-			v, err := CollectBatVars(devbat, arch, strconv.Itoa(majorVer), commonDir)
+			v, err := CollectBatVars(devbat, arch, strconv.Itoa(majorVer), commonDir, feedback)
 			if err == nil {
 				vvs[i] = v
 			}
@@ -268,10 +273,11 @@ func TestArches(inst *Installation, feedback func(string)) []*toolchain.Chain {
 		if incs := strings.Split(vars["INCLUDE"], ";"); len(incs) > 0 {
 			for _, v := range incs {
 				if v != "" && fs.DirExists(v) {
-					tc.IncludeDirs = append(tc.IncludeDirs, filepath.ToSlash(v))
+					tc.CCIncludeDirs = append(tc.CCIncludeDirs, filepath.ToSlash(v))
 				}
 			}
 		}
+		tc.CXXIncludeDirs = tc.CCIncludeDirs
 
 		if libs := strings.Split(vars["LIB"], ";"); len(libs) > 0 {
 			for _, v := range libs {
@@ -333,13 +339,18 @@ func TestArches(inst *Installation, feedback func(string)) []*toolchain.Chain {
 			}
 		}
 
+		for k, v := range vars {
+			tc.Environment = append(tc.Environment, fmt.Sprintf("%s=%s", k, v))
+		}
+		sort.Strings(tc.Environment)
+
 		toolchains = append(toolchains, tc)
 	}
 
 	return toolchains
 }
 
-func CollectBatVars(devbat string, arg string, majorVer string, commonDir string) (map[string]string, error) {
+func CollectBatVars(devbat string, arg string, majorVer string, commonDir string, feedback func(string)) (map[string]string, error) {
 	ret := map[string]string{}
 	fn := "test.bat"
 	batfname := "vs-cmt-" + fn
@@ -375,11 +386,22 @@ func CollectBatVars(devbat string, arg string, majorVer string, commonDir string
 		return nil, err
 	}
 
+	if feedback != nil {
+		feedback(fmt.Sprintf("- calling devbat %s", arg))
+	}
 	lines := strings.Split(string(buf), "\n")
 	for _, line := range lines {
+		if feedback != nil {
+			feedback(fmt.Sprintf("> %s", line))
+		}
 		p := strings.Index(line, ":=")
 		if p > 0 {
-			ret[strings.TrimSpace(line[:p])] = strings.TrimSpace(line[p+2:])
+			n := strings.TrimSpace(line[:p])
+			v := strings.TrimSpace(line[p+2:])
+			ret[n] = v
+			//if feedback != nil {
+			//	feedback(fmt.Sprintf("    - %s=%s", n, v))
+			//}
 		}
 	}
 	if ret["INCLUDE"] == "" {

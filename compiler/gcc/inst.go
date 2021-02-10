@@ -43,7 +43,9 @@ func DiscoverInstallations(feedback func(string)) []*Installation {
 		if err != nil {
 			continue
 		}
-		sigstr := ver.FullVersion + ver.Version + ver.Target + ver.ThreadModel + strings.Join(ver.IncludeDirs, "|")
+		sigstr := ver.FullVersion + ver.Version + ver.Target + ver.ThreadModel +
+			strings.Join(ver.CCIncludeDirs, "|") + "#" +
+			strings.Join(ver.CXXIncludeDirs, "|")
 
 		vc := vcs[sigstr]
 		if vc == nil {

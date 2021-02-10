@@ -62,7 +62,7 @@ func QueryVersion(exe string) (*Ver, error) {
 			ret.InstalledDir = filepath.ToSlash(strings.TrimSpace(match[1]))
 		}
 	}
-	ret.IncludeDirs = append(ret.IncludeDirs, gcc.ExtractIncludePaths(exe, "c")...)
-	ret.IncludeDirs = append(ret.IncludeDirs, gcc.ExtractIncludePaths(exe, "c++")...)
+	ret.CCIncludeDirs = append(ret.CCIncludeDirs, gcc.ExtractIncludePaths(exe, "c")...)
+	ret.CXXIncludeDirs = append(ret.CXXIncludeDirs, gcc.ExtractIncludePaths(exe, "c++")...)
 	return ret, nil
 }

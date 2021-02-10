@@ -7,13 +7,17 @@ import (
 	"github.com/adnsv/go-build/compiler/toolchain"
 )
 
-// Ver is a version info extracted from `gcc -v` output
+// Ver is a version info extracted from `-v` output
+// Include dirs are extracted with output from
+// - `-xc -E -v -`
+// - `-xc++ -E -v -`
 type Ver struct {
-	FullVersion string   `json:"full-version"`
-	Version     string   `json:"version"`
-	Target      string   `json:"target"`
-	ThreadModel string   `json:"thread-model"`
-	IncludeDirs []string `json:"include-dirs"`
+	FullVersion    string   `json:"full-version"`
+	Version        string   `json:"version"`
+	Target         string   `json:"target"`
+	ThreadModel    string   `json:"thread-model"`
+	CCIncludeDirs  []string `json:"cc-include-dirs"`
+	CXXIncludeDirs []string `json:"cxx-include-dirs"`
 }
 
 type Installation struct {

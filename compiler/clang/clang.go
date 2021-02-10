@@ -9,12 +9,13 @@ import (
 
 // Ver is a version info extracted from `clang -v` output
 type Ver struct {
-	FullVersion  string   `json:"full-version"`
-	Version      string   `json:"version"`
-	Target       string   `json:"target"`
-	ThreadModel  string   `json:"thread-model"`
-	IncludeDirs  []string `json:"include-dirs"`
-	InstalledDir string   `json:"installed-dir"`
+	FullVersion    string   `json:"full-version"`
+	Version        string   `json:"version"`
+	Target         string   `json:"target"`
+	ThreadModel    string   `json:"thread-model"`
+	CCIncludeDirs  []string `json:"cc-include-dirs"`
+	CXXIncludeDirs []string `json:"cxx-include-dirs"`
+	InstalledDir   string   `json:"installed-dir"`
 }
 
 type Installation struct {

@@ -53,8 +53,8 @@ func QueryVersion(exe string) (*Ver, error) {
 			ret.ThreadModel = strings.TrimSpace(match[1])
 		}
 	}
-	ret.IncludeDirs = append(ret.IncludeDirs, ExtractIncludePaths(exe, "c")...)
-	ret.IncludeDirs = append(ret.IncludeDirs, ExtractIncludePaths(exe, "c++")...)
+	ret.CCIncludeDirs = append(ret.CCIncludeDirs, ExtractIncludePaths(exe, "c")...)
+	ret.CXXIncludeDirs = append(ret.CXXIncludeDirs, ExtractIncludePaths(exe, "c++")...)
 	return ret, nil
 }
 

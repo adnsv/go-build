@@ -21,8 +21,10 @@ type Chain struct {
 
 	Tools Toolset `json:"tools"` // paths to tool executables
 
-	IncludeDirs []string `json:"include-dirs,omitempty"`
-	LibraryDirs []string `json:"library-dirs,omitempty"`
+	CCIncludeDirs  []string `json:"cc-include-dirs,omitempty"`
+	CXXIncludeDirs []string `json:"cxx-include-dirs,omitempty"`
+	LibraryDirs    []string `json:"library-dirs,omitempty"`
+	Environment    []string `json:"environment"`
 }
 
 func (tc *Chain) PrintSummary(w io.Writer) {
