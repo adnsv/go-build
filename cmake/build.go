@@ -66,6 +66,8 @@ func MSVCGenerator(name string, arch string, toolset string) *Generator {
 			"64":    "x64",
 			"x64":   "x64",
 			"amd64": "x64",
+			"32":    "Win32",
+			"x32":   "Win32",
 			"86":    "Win32",
 			"x86":   "Win32",
 			"386":   "Win32",
