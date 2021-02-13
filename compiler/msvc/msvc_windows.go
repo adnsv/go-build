@@ -270,7 +270,7 @@ func TestArches(inst *Installation, feedback func(string)) []*toolchain.Chain {
 			tc.WindowsSDKVersion = strings.TrimRight(s, `\`)
 		}
 
-		if incs := strings.Split(vars["INCLUDE"], ";"); len(incs) > 0 {
+		if incs := filepath.SplitList(vars["INCLUDE"]); len(incs) > 0 {
 			for _, v := range incs {
 				if v != "" && fs.DirExists(v) {
 					tc.CCIncludeDirs = append(tc.CCIncludeDirs, filepath.ToSlash(v))
@@ -287,7 +287,7 @@ func TestArches(inst *Installation, feedback func(string)) []*toolchain.Chain {
 			}
 		}
 
-		paths := strings.Split(vars["PATH"], ";")
+		paths := filepath.SplitList(vars["PATH"])
 
 		if s := vars["CL"]; s != "" {
 			tc.Tools[toolchain.CCompiler] = filepath.ToSlash(s)
