@@ -34,6 +34,7 @@ type Builder struct {
 	CMakeCmd string
 	Stdout   io.Writer
 	Stderr   io.Writer
+	Env      []string
 
 	SourceDir   string
 	BuildDir    string
@@ -131,6 +132,7 @@ func (b *Builder) Generate() error {
 	//cmd := exec.Command(c, "--version")
 	cmd.Stdout = b.Stdout
 	cmd.Stderr = b.Stderr
+	cmd.Env = b.Env
 	//cmd.Stderr = cmd.StdoutPipe()
 
 	return cmd.Run()
