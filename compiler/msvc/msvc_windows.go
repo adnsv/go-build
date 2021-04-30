@@ -342,7 +342,7 @@ func TestArches(inst *Installation, feedback func(string)) []*toolchain.Chain {
 		for _, path := range paths {
 			fn := filepath.Join(path, "mt.exe")
 			if fs.FileExists(fn) {
-				tc.Tools[toolchain.ResourceCompiler] = filepath.ToSlash(fn)
+				tc.Tools[toolchain.ManifestTool] = filepath.ToSlash(fn)
 				break
 			}
 		}
