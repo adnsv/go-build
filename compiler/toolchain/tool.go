@@ -20,6 +20,7 @@ const (
 	Archiver
 	DLLLinker
 	EXELinker
+	ManifestTool
 
 	OBJCopy
 	OBJDump
@@ -39,6 +40,7 @@ var shortToolNames = map[Tool]string{
 	Archiver:         "ar",
 	DLLLinker:        "dll",
 	EXELinker:        "exe",
+	ManifestTool:     "mt",
 	OBJCopy:          "objcopy",
 	OBJDump:          "objdump",
 	Runlib:           "runlib",
@@ -54,6 +56,7 @@ var longToolNames = map[Tool]string{
 	Archiver:         "Archiver",
 	DLLLinker:        "DLL/SO Linker",
 	EXELinker:        "Executable Linker",
+	ManifestTool:     "Manifest Tool",
 	OBJCopy:          "objcopy",
 	OBJDump:          "objdump",
 	Runlib:           "runlib",
@@ -105,6 +108,8 @@ func ToolFromString(s string) (Tool, error) {
 		return DLLLinker, nil
 	case "exe":
 		return EXELinker, nil
+	case "mt":
+		return ManifestTool, nil
 	case "objcopy":
 		return OBJCopy, nil
 	case "objdump":
@@ -173,6 +178,7 @@ var orderedToolList = []Tool{
 	Archiver,
 	DLLLinker,
 	EXELinker,
+	ManifestTool,
 	OBJCopy,
 	OBJDump,
 	Runlib,

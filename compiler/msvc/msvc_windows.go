@@ -339,6 +339,14 @@ func TestArches(inst *Installation, feedback func(string)) []*toolchain.Chain {
 			}
 		}
 
+		for _, path := range paths {
+			fn := filepath.Join(path, "mt.exe")
+			if fs.FileExists(fn) {
+				tc.Tools[toolchain.ResourceCompiler] = filepath.ToSlash(fn)
+				break
+			}
+		}
+
 		for k, v := range vars {
 			tc.Environment = append(tc.Environment, fmt.Sprintf("%s=%s", k, v))
 		}
