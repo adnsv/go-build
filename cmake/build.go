@@ -36,10 +36,10 @@ type Builder struct {
 	Stderr   io.Writer
 	Env      []string
 
-	SourceDir   string
-	BuildDir    string
-	BuildType   BuildType // injected as -DCMAKE_BUILD_TYPE:STRING=${BuildType}
-	BuildTarget string
+	SourceDir    string
+	BuildDir     string
+	BuildType    BuildType // injected as -DCMAKE_BUILD_TYPE:STRING=${BuildType}
+	BuildTargets []string
 
 	GenerateFlags []string // -DVAR=VALUE pairs
 	BuildFlags    []string
@@ -116,8 +116,8 @@ func (b *Builder) EffectiveBuildArgs() []string {
 	args = append(args, "--build")
 	args = append(args, b.BuildDir)
 	args = append(args, "--config", b.BuildType.String())
-	if b.BuildTarget != "" {
-		args = append(args, "--target", b.BuildTarget)
+	for _, t := range b.BuildTargets {
+		args = append(args, "--target", t)
 	}
 	args = append(args, "--parallel")
 	return args
