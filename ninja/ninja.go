@@ -30,12 +30,13 @@ func Prepare(p *proj.Project, tc *toolchain.Chain, flagset proj.Flagset) []byte 
 
 	h1("paths")
 
-	lf("root = %s", filepath.ToSlash(p.BuildRoot))
-	lf("builddir = %s", ".")
+	lf("builddir = %s", filepath.ToSlash(p.BuildDir))
 
 	h1("tools")
 
-	reqTools := p.RequiredTools()
+	buildables := p.Buildables()
+
+	reqTools := proj.RequiredTools(buildables)
 	for _, t := range tools {
 		if reqTools[t] {
 			lf("%s\t= %s", toolName[t], tc.Tools[t])
@@ -53,48 +54,50 @@ func Prepare(p *proj.Project, tc *toolchain.Chain, flagset proj.Flagset) []byte 
 		objExt = ".obj"
 	}
 
-	// collect include paths from dependencies
-	depIncludeVars := []string{}
-	dependencies := map[string]string{}
-	if len(p.Dependencies) > 0 {
-		h1("dependencies")
+	/*
+		// collect include paths from dependencies
+		depIncludeVars := []string{}
+		dependencies := map[string]string{}
+		if len(p.Dependencies) > 0 {
+			h1("dependencies")
 
-		for _, dn := range p.Dependencies {
-			libinfo := p.Libraries[dn]
-			if libinfo == nil || libinfo.Kind != p.LibraryPackageTarget {
-				continue
-			}
-			/*
-				dc := libinfo.Context
-				builddirVar := dc.Name + "_builddir"
-				rootVar := dc.Name + "_root"
-				lf("%s = %s", builddirVar, filepath.ToSlash(libinfo.Context.BuildDir))
-				lf("%s = %s", rootVar, filepath.ToSlash(filepath.Join(libinfo.Context.Package.ActualAbsDir, libinfo.Context.Target.Root)))
+			for _, dn := range p.Dependencies {
+				libinfo := p.Libraries[dn]
+				if libinfo == nil || libinfo.Kind != p.LibraryPackageTarget {
+					continue
+				}
 
-				inc := []string{}
-				if len(dc.Transforms) > 0 {
+					dc := libinfo.Context
+					builddirVar := dc.Name + "_builddir"
+					rootVar := dc.Name + "_root"
+					lf("%s = %s", builddirVar, filepath.ToSlash(libinfo.Context.BuildDir))
+					lf("%s = %s", rootVar, filepath.ToSlash(filepath.Join(libinfo.Context.Package.ActualAbsDir, libinfo.Context.Target.Root)))
+
+					inc := []string{}
+					if len(dc.Transforms) > 0 {
+						if len(dc.Files.Includes) > 0 {
+							for _, dir := range dc.Files.Includes {
+								inc = append(inc, incPrefix+"$"+builddirVar+"/transforms/"+filepath.ToSlash(dir))
+							}
+						} else {
+							inc = append(inc, incPrefix+"$"+builddirVar+"/transforms")
+						}
+					}
 					if len(dc.Files.Includes) > 0 {
 						for _, dir := range dc.Files.Includes {
-							inc = append(inc, incPrefix+"$"+builddirVar+"/transforms/"+filepath.ToSlash(dir))
+							inc = append(inc, incPrefix+"$"+rootVar+"/"+filepath.ToSlash(dir))
 						}
 					} else {
-						inc = append(inc, incPrefix+"$"+builddirVar+"/transforms")
+						inc = append(inc, incPrefix+"$"+rootVar)
 					}
-				}
-				if len(dc.Files.Includes) > 0 {
-					for _, dir := range dc.Files.Includes {
-						inc = append(inc, incPrefix+"$"+rootVar+"/"+filepath.ToSlash(dir))
-					}
-				} else {
-					inc = append(inc, incPrefix+"$"+rootVar)
-				}
 
-				lf("%s_includes = %s", dc.Name, strings.Join(inc, " "))
-				depIncludeVars = append(depIncludeVars, fmt.Sprintf("$%s_includes", dc.Name))
-				dependencies[dn] = fmt.Sprintf("$%s_builddir/%s%s", dc.Name, dc.Name, arExt)
-			*/
+					lf("%s_includes = %s", dc.Name, strings.Join(inc, " "))
+					depIncludeVars = append(depIncludeVars, fmt.Sprintf("$%s_includes", dc.Name))
+					dependencies[dn] = fmt.Sprintf("$%s_builddir/%s%s", dc.Name, dc.Name, arExt)
+
+			}
 		}
-	}
+	*/
 
 	h1("flags")
 

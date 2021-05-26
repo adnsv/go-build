@@ -2,6 +2,7 @@ package cmake
 
 import (
 	"io"
+	"os"
 	"os/exec"
 	"strings"
 )
@@ -128,12 +129,12 @@ func (b *Builder) Generate() error {
 	if c == "" {
 		c = "cmake"
 	}
+	os.MkdirAll(b.BuildDir, 0755)
 	cmd := exec.Command(c, b.EffectiveGenerateArgs()...)
-	//cmd := exec.Command(c, "--version")
+	cmd.Dir = b.BuildDir
 	cmd.Stdout = b.Stdout
 	cmd.Stderr = b.Stderr
 	cmd.Env = b.Env
-	//cmd.Stderr = cmd.StdoutPipe()
 
 	return cmd.Run()
 }
@@ -144,6 +145,7 @@ func (b *Builder) Build() error {
 		c = "cmake"
 	}
 	cmd := exec.Command(c, b.EffectiveBuildArgs()...)
+	cmd.Dir = b.BuildDir
 	cmd.Stdout = b.Stdout
 	cmd.Stderr = b.Stderr
 	return cmd.Run()

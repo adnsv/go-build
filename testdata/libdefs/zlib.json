@@ -1,0 +1,27 @@
+{
+    "name": "zlib",
+    "features": [
+        {
+            "name": "zlib",
+            "includes": "${root}",
+            "sources": [
+                "${root}/adler32.c",
+                "${root}/crc32.c",
+                "${root}/deflate.c",
+                "${root}/trees.c",
+                "${root}/inflate.c",
+                "${root}/inftrees.c",
+                "${root}/inffast.c",
+                "${root}/zutil.c",
+                "${root}/gzlib.c",
+                "${root}/gzread.c",
+                "${root}/gzwrite.c",
+                "${root}/gzclose.c"
+            ],
+            "definitions": [
+                "UNIX:HAVE_UNISTD_H",
+                "UNIX:HAVE_STDARG_H"
+            ]
+        }
+    ]
+}
