@@ -1,7 +1,6 @@
 package winres
 
 import (
-	"github.com/adnsv/go-utils/version"
 	"github.com/josephspurrier/goversioninfo"
 	"github.com/winlabs/gowin32"
 )
