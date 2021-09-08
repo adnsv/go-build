@@ -53,19 +53,20 @@ func DiscoverToolchains(wantCxx bool, types []string, feedback func(string)) []*
 
 func archNorm(arch string) string {
 	var archNorm = map[string]string{
-		"x64":    "x64",
-		"amd64":  "x64",
-		"x86_64": "x64",
-		"x32":    "x32",
-		"86":     "x32",
-		"x86":    "x32",
-		"386":    "x32",
-		"486":    "x32",
-		"586":    "x32",
-		"686":    "x32",
-		"arm":    "arm32",
-		"arm32":  "arm32",
-		"arm64":  "arm64",
+		"x64":     "x64",
+		"amd64":   "x64",
+		"x86_64":  "x64",
+		"x32":     "x32",
+		"86":      "x32",
+		"x86":     "x32",
+		"386":     "x32",
+		"486":     "x32",
+		"586":     "x32",
+		"686":     "x32",
+		"arm":     "arm32",
+		"arm32":   "arm32",
+		"arm64":   "arm64",
+		"aarch64": "arm64",
 	}
 	arch = strings.ToLower(arch)
 	if norm, ok := archNorm[arch]; ok {
