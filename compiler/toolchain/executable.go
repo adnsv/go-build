@@ -4,7 +4,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/adnsv/go-utils/fs"
+	"github.com/adnsv/go-utils/filesystem"
 )
 
 type Executable struct {
@@ -30,7 +30,7 @@ func (x *Executable) ChoosePrimaryCCompilerPath(target, cc, version string) {
 		x.PrimaryPath = filepath.ToSlash(x.OtherPaths[i])
 		x.OtherPaths[i] = "" // will get removed in the NormalizePathsToSlash call below
 	}
-	x.OtherPaths = fs.NormalizePathsToSlash(x.OtherPaths)
+	x.OtherPaths = filesystem.NormalizePathsToSlash(x.OtherPaths)
 }
 
 func FindBestString(ss []string, scorer func(string) int) int {
@@ -61,9 +61,9 @@ func CCompilerScore(target, cc, version, fn string) int {
 	if cc == "gcc" {
 		// gcc/g++ gcc/c++ pairs
 		if strings.Contains(b, cc) {
-			if gxx := filepath.Join(d, strings.Replace(b, "gcc", "g++", 1)); fs.FileExists(gxx) {
+			if gxx := filepath.Join(d, strings.Replace(b, "gcc", "g++", 1)); filesystem.FileExists(gxx) {
 				score += 64000
-			} else if cxx := filepath.Join(d, strings.Replace(b, "gcc", "c++", 1)); fs.FileExists(cxx) {
+			} else if cxx := filepath.Join(d, strings.Replace(b, "gcc", "c++", 1)); filesystem.FileExists(cxx) {
 				score += 64000
 			}
 		}
@@ -99,20 +99,20 @@ func (x *Executable) FindTool(cc string, names ...string) string {
 	for _, tn := range names {
 		fn := x.PrimaryPath
 		if i := strings.LastIndex(fn, cc); i >= 0 {
-			if t := fn[:i] + tn + fn[i+3:]; fs.FileExists(t) {
+			if t := fn[:i] + tn + fn[i+3:]; filesystem.FileExists(t) {
 				return t
 			}
 		}
 		for _, fn = range x.OtherPaths {
 			if i := strings.LastIndex(fn, cc); i >= 0 {
-				if t := fn[:i] + tn + fn[i+3:]; fs.FileExists(t) {
+				if t := fn[:i] + tn + fn[i+3:]; filesystem.FileExists(t) {
 					return t
 				}
 			}
 		}
 		for _, fn = range x.SymLinks {
 			if i := strings.LastIndex(fn, cc); i >= 0 {
-				if t := fn[:i] + tn + fn[i+3:]; fs.FileExists(t) {
+				if t := fn[:i] + tn + fn[i+3:]; filesystem.FileExists(t) {
 					return t
 				}
 			}

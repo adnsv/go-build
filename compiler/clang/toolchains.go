@@ -6,7 +6,7 @@ import (
 	"sort"
 
 	"github.com/adnsv/go-build/compiler/toolchain"
-	"github.com/adnsv/go-utils/fs"
+	"github.com/adnsv/go-utils/filesystem"
 )
 
 func DiscoverToolchains(wantCxx bool, feedback func(string)) []*toolchain.Chain {
@@ -55,8 +55,8 @@ func DiscoverToolchains(wantCxx bool, feedback func(string)) []*toolchain.Chain 
 		if v := tc.Tools[toolchain.CXXCompiler]; v != "" {
 			em["CXX"] = v
 		}
-		em["C_INCLUDE_PATH"] = fs.JoinPathList(tc.CCIncludeDirs...)
-		em["CPLUS_INCLUDE_PATH"] = fs.JoinPathList(tc.CXXIncludeDirs...)
+		em["C_INCLUDE_PATH"] = filesystem.JoinPathList(tc.CCIncludeDirs...)
+		em["CPLUS_INCLUDE_PATH"] = filesystem.JoinPathList(tc.CXXIncludeDirs...)
 		for k, v := range em {
 			tc.Environment = append(tc.Environment, fmt.Sprintf("%s=%s", k, v))
 		}

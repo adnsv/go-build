@@ -8,7 +8,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/adnsv/go-utils/fs"
+	"github.com/adnsv/go-utils/filesystem"
 	"github.com/blang/semver"
 )
 
@@ -19,7 +19,7 @@ func DiscoverInstallations(feedback func(string)) []*Installation {
 		feedback("discovering clang installations")
 	}
 
-	files := fs.SearchFilesAndSymlinks(filepath.SplitList(os.Getenv("PATH")),
+	files := filesystem.SearchFilesAndSymlinks(filepath.SplitList(os.Getenv("PATH")),
 		func(fi os.FileInfo) bool {
 			return reCLANG.MatchString(fi.Name())
 		})

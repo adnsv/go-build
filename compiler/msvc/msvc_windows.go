@@ -15,7 +15,7 @@ import (
 	"sync"
 
 	"github.com/adnsv/go-build/compiler/toolchain"
-	"github.com/adnsv/go-utils/fs"
+	"github.com/adnsv/go-utils/filesystem"
 )
 
 const vswhereSubpath = "Microsoft Visual Studio/Installer/vswhere.exe"
@@ -34,20 +34,20 @@ func DiscoverInstallations(feedback func(string)) ([]*Installation, error) {
 		paths = append(paths, s)
 	}
 
-	if pf := os.Getenv("ProgramFiles(x86)"); fs.DirExists(pf) {
+	if pf := os.Getenv("ProgramFiles(x86)"); filesystem.DirExists(pf) {
 		addPath(filepath.Join(pf, vswhereSubpath))
 	}
-	if pf := os.Getenv("ProgramFiles"); fs.DirExists(pf) {
+	if pf := os.Getenv("ProgramFiles"); filesystem.DirExists(pf) {
 		addPath(filepath.Join(pf, vswhereSubpath))
 	}
-	if fs.DirExists("C:\\Program Files (x86)") {
+	if filesystem.DirExists("C:\\Program Files (x86)") {
 		addPath(filepath.Join("C:\\Program Files (x86)", vswhereSubpath))
 	}
 	addPath("vswhere.exe")
 
 	vswherePath := ""
 	for _, path := range paths {
-		if fs.FileExists(path) {
+		if filesystem.FileExists(path) {
 			vswherePath = path
 			break
 		}
@@ -193,9 +193,9 @@ func TestArches(inst *Installation, feedback func(string)) []*toolchain.Chain {
 		feedback(fmt.Sprintf("testing installation: %s", inst.InstallationPath))
 	}
 
-	if !fs.FileExists(devbat) {
+	if !filesystem.FileExists(devbat) {
 		devbat = filepath.Join(inst.InstallationPath, "VC", "vcvarsall.bat")
-		if !fs.FileExists(devbat) {
+		if !filesystem.FileExists(devbat) {
 			devbat = ""
 			if feedback != nil {
 				feedback("ERROR: failed to locate vcvarsall.bat file")
@@ -272,7 +272,7 @@ func TestArches(inst *Installation, feedback func(string)) []*toolchain.Chain {
 
 		if incs := filepath.SplitList(vars["INCLUDE"]); len(incs) > 0 {
 			for _, v := range incs {
-				if v != "" && fs.DirExists(v) {
+				if v != "" && filesystem.DirExists(v) {
 					tc.CCIncludeDirs = append(tc.CCIncludeDirs, filepath.ToSlash(v))
 				}
 			}
@@ -295,7 +295,7 @@ func TestArches(inst *Installation, feedback func(string)) []*toolchain.Chain {
 		} else {
 			for _, path := range paths {
 				fn := filepath.Join(path, "cl.exe")
-				if fs.FileExists(fn) {
+				if filesystem.FileExists(fn) {
 					tc.Tools[toolchain.CCompiler] = filepath.ToSlash(fn)
 					tc.Tools[toolchain.CXXCompiler] = filepath.ToSlash(fn)
 					break
@@ -309,7 +309,7 @@ func TestArches(inst *Installation, feedback func(string)) []*toolchain.Chain {
 		} else {
 			for _, path := range paths {
 				fn := filepath.Join(path, "link.exe")
-				if fs.FileExists(fn) {
+				if filesystem.FileExists(fn) {
 					tc.Tools[toolchain.DLLLinker] = filepath.ToSlash(fn)
 					tc.Tools[toolchain.EXELinker] = filepath.ToSlash(fn)
 					break
@@ -318,10 +318,10 @@ func TestArches(inst *Installation, feedback func(string)) []*toolchain.Chain {
 		}
 
 		ar := filepath.Join(filepath.Dir(tc.Tools[toolchain.DLLLinker]), "lib.exe")
-		if !fs.FileExists(ar) {
+		if !filesystem.FileExists(ar) {
 			for _, path := range paths {
 				fn := filepath.Join(path, "lib.exe")
-				if fs.FileExists(fn) {
+				if filesystem.FileExists(fn) {
 					ar = fn
 					break
 				}
@@ -333,7 +333,7 @@ func TestArches(inst *Installation, feedback func(string)) []*toolchain.Chain {
 
 		for _, path := range paths {
 			fn := filepath.Join(path, "rc.exe")
-			if fs.FileExists(fn) {
+			if filesystem.FileExists(fn) {
 				tc.Tools[toolchain.ResourceCompiler] = filepath.ToSlash(fn)
 				break
 			}
@@ -341,7 +341,7 @@ func TestArches(inst *Installation, feedback func(string)) []*toolchain.Chain {
 
 		for _, path := range paths {
 			fn := filepath.Join(path, "mt.exe")
-			if fs.FileExists(fn) {
+			if filesystem.FileExists(fn) {
 				tc.Tools[toolchain.ManifestTool] = filepath.ToSlash(fn)
 				break
 			}
