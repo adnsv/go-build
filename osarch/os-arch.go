@@ -133,6 +133,7 @@ func (oa *Pair) UnmarshalJSON(b []byte) (err error) {
 	var s string
 	if json.Unmarshal(b, &s); err == nil {
 		*oa, err = Parse(s)
+		return
 	}
 	return ErrInvalid
 }
