@@ -84,7 +84,7 @@ func MSVCGenerator(name string, arch string, toolset string) *Generator {
 		}
 	}
 	if name == "" {
-		name = "Visual Studio 16 2019"
+		name = "Visual Studio 17 2022"
 	}
 	return &Generator{
 		Name:    name,
