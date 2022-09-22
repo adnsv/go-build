@@ -9,7 +9,7 @@ import (
 	"strings"
 
 	"github.com/adnsv/go-utils/filesystem"
-	"github.com/blang/semver"
+	"github.com/blang/semver/v4"
 )
 
 var reCLANG = regexp.MustCompile(`^clang(-\d+(\.\d+(\.\d+)?)?)?(\.exe)?$`)
