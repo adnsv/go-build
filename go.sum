@@ -1,5 +1,3 @@
-github.com/adnsv/go-utils v0.5.1 h1:Lg+rooNu8IBa3qobgaYGbUEzhRwm2sjvOjZ9usId9jA=
-github.com/adnsv/go-utils v0.5.1/go.mod h1:jBL3afsCjsVyP09CeX+1nWRxNJTJeUrS33MIrKay4mc=
 github.com/adnsv/go-utils v0.5.2 h1:9ugDf3UTQD8zVt2470bjiCPhwdTAoXRYJcUOVuEX7C0=
 github.com/adnsv/go-utils v0.5.2/go.mod h1:7eI7D4tJjDcshitHT29rcPZx1U9++OOuUSPw8da7QX4=
 github.com/akavel/rsrc v0.10.2 h1:Zxm8V5eI1hW4gGaYsJQUhxpjkENuG91ki8B4zCrvEsw=
@@ -23,8 +21,6 @@ github.com/stretchr/testify v1.6.1 h1:hDPOHmpOpP40lSULcqw7IrRb/u7w6RpDC9399XyoNd
 github.com/stretchr/testify v1.6.1/go.mod h1:6Fq8oRcR53rry900zMqJjRRixrwX3KX962/h/Wwjteg=
 github.com/winlabs/gowin32 v0.0.0-20210302152218-c9e40aa88058 h1:ueVHMozQDpDiMXXwAytLRH3CNOr29kiwvVaX7knZgY8=
 github.com/winlabs/gowin32 v0.0.0-20210302152218-c9e40aa88058/go.mod h1:N51TYkG9JGR5sytj0EoPl31Xg2kuB507lxEmrwSNvfQ=
-golang.org/x/exp v0.0.0-20220921164117-439092de6870 h1:j8b6j9gzSigH28O5SjSpQSSh9lFd6f5D/q0aHjNTulc=
-golang.org/x/exp v0.0.0-20220921164117-439092de6870/go.mod h1:cyybsKvd6eL0RnXn6p/Grxp8F5bW7iYuBgsNCOHpMYE=
 gopkg.in/check.v1 v0.0.0-20161208181325-20d25e280405/go.mod h1:Co6ibVJAznAaIkqp8huTwlJQCZ016jof/cbN4VW5Yz0=
 gopkg.in/yaml.v2 v2.2.2/go.mod h1:hI93XBmqTisBFMUTm0b8Fm+jr3Dg1NNxqwp+5A1VGuI=
 gopkg.in/yaml.v2 v2.2.5/go.mod h1:hI93XBmqTisBFMUTm0b8Fm+jr3Dg1NNxqwp+5A1VGuI=
