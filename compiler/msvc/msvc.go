@@ -7,12 +7,12 @@ import (
 
 // Installation corresponds to an instance of VisualStudio
 type Installation struct {
-	InstanceID          string `json:"instanceId"`
-	DisplayName         string `json:"displayName"`
-	InstallationPath    string `json:"installationPath"`
-	InstallationVersion string `json:"installationVersion"`
-	Description         string `json:"description"`
-	IsPrerelease        bool   `json:"isPrerelease"`
+	DisplayName         string `json:"display-name" yaml:"display-name"`
+	InstanceID          string `json:"instance-id" yaml:"instance-id"`
+	InstallationPath    string `json:"installation-path" yaml:"installation-path"`
+	InstallationVersion string `json:"installation-version" yaml:"installation-version"`
+	Description         string `json:"description" yaml:"description"`
+	IsPrerelease        bool   `json:"is-prerelease" yaml:"is-prerelease"`
 }
 
 func (i *Installation) PrintSummary(w io.Writer) {

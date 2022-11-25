@@ -69,14 +69,31 @@ func DiscoverInstallations(feedback func(string)) ([]*Installation, error) {
 		feedback(fmt.Sprintf("vswhere output: %s", string(buf)))
 	}
 
-	installations := []*Installation{}
-	err = json.Unmarshal(buf, &installations)
+	type vsWhereInstallation struct {
+		InstanceID          string `json:"instanceId"`
+		DisplayName         string `json:"displayName"`
+		InstallationPath    string `json:"installationPath"`
+		InstallationVersion string `json:"installationVersion"`
+		Description         string `json:"description"`
+		IsPrerelease        bool   `json:"isPrerelease"`
+	}
+
+	tmp := []*vsWhereInstallation{}
+	err = json.Unmarshal(buf, &tmp)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse vswhere output: %s", err)
 	}
 
-	for _, i := range installations {
-		i.InstallationPath = filepath.ToSlash(i.InstallationPath)
+	installations := make([]*Installation, 0, len(tmp))
+	for _, i := range tmp {
+		installations = append(installations, &Installation{
+			InstanceID:          i.InstanceID,
+			DisplayName:         i.DisplayName,
+			InstallationPath:    filepath.ToSlash(i.InstallationPath),
+			InstallationVersion: i.InstallationVersion,
+			Description:         i.Description,
+			IsPrerelease:        i.IsPrerelease,
+		})
 	}
 
 	// sort, latest versions first

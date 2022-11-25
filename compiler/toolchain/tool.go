@@ -126,7 +126,7 @@ func ToolFromString(s string) (Tool, error) {
 }
 
 // MarshalText implements TextMarshaler interface for Tool
-func (t *Tool) MarshalText() (text []byte, err error) {
+func (t Tool) MarshalText() (text []byte, err error) {
 	return []byte(t.String()), nil
 }
 
@@ -136,8 +136,12 @@ func (t *Tool) UnmarshalText(text []byte) (err error) {
 	return
 }
 
+func (t Tool) MarshalYAML() (interface{}, error) {
+	return t.String(), nil
+}
+
 // MarshalJSON provides JSON writing support for Tool
-func (t *Tool) MarshalJSON() (text []byte, err error) {
+func (t Tool) MarshalJSON() (text []byte, err error) {
 	return []byte(t.String()), nil
 }
 

@@ -12,17 +12,17 @@ import (
 // - `-xc -E -v -`
 // - `-xc++ -E -v -`
 type Ver struct {
-	FullVersion    string   `json:"full-version"`
-	Version        string   `json:"version"`
-	Target         string   `json:"target"`
-	ThreadModel    string   `json:"thread-model"`
-	CCIncludeDirs  []string `json:"cc-include-dirs"`
-	CXXIncludeDirs []string `json:"cxx-include-dirs"`
+	FullVersion    string   `json:"full-version" yaml:"full-version"`
+	Version        string   `json:"version" yaml:"version"`
+	Target         string   `json:"target" yaml:"target"`
+	ThreadModel    string   `json:"thread-model" yaml:"thread-model"`
+	CCIncludeDirs  []string `json:"cc-include-dirs" yaml:"cc-include-dirs"`
+	CXXIncludeDirs []string `json:"cxx-include-dirs" yaml:"cxx-include-dirs"`
 }
 
 type Installation struct {
 	Ver
-	CCompiler toolchain.Executable `json:"c-compiler"`
+	CCompiler toolchain.Executable `json:"c-compiler" yaml:"c-compiler"`
 }
 
 func (i *Installation) PrintSummary(w io.Writer) {

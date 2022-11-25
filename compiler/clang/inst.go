@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"runtime"
 	"sort"
 	"strings"
 
@@ -19,7 +20,21 @@ func DiscoverInstallations(feedback func(string)) []*Installation {
 		feedback("discovering clang installations")
 	}
 
-	files := filesystem.SearchFilesAndSymlinks(filepath.SplitList(os.Getenv("PATH")),
+	search_paths := filepath.SplitList(os.Getenv("PATH"))
+
+	if runtime.GOOS == "windows" {
+		if f := os.Getenv("LLVM_ROOT"); filesystem.DirExists(f) {
+			search_paths = append(search_paths, filepath.Join(f, "LLVM", "bin"))
+		}
+		if f := os.Getenv("ProgramFiles(x86)"); filesystem.DirExists(f) {
+			search_paths = append(search_paths, filepath.Join(f, "LLVM", "bin"))
+		}
+		if f := os.Getenv("ProgramFiles"); filesystem.DirExists(f) {
+			search_paths = append(search_paths, filepath.Join(f, "LLVM", "bin"))
+		}
+	}
+
+	files := filesystem.SearchFilesAndSymlinks(search_paths,
 		func(fi os.FileInfo) bool {
 			return reCLANG.MatchString(fi.Name())
 		})
