@@ -4,6 +4,7 @@ go 1.18
 
 require (
 	github.com/adnsv/go-utils v0.5.2
+	github.com/alecthomas/kong v0.7.1
 	github.com/blang/semver/v4 v4.0.0
 	github.com/jawher/mow.cli v1.2.0
 	github.com/josephspurrier/goversioninfo v1.4.0

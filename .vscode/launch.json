@@ -10,7 +10,8 @@
             "request": "launch",
             "mode": "auto",
             "program": "${workspaceFolder}/cmd/go-build",
-            "args": ["discover-toolchains"]
+            "args": ["discover-toolchains", "-f=gcc"],
+            "console": "integratedTerminal"
         }
     ]
 }
