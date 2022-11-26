@@ -45,10 +45,10 @@
                 "--format=yaml",
                 //"--output=testdata/installations.yaml"
             ],
-            "env": {
-                "CC": "C:/Program Files (x86)/Microsoft Visual Studio/2022/BuildTools/VC/Tools/MSVC/14.33.31629/bin/HostX64/x86/cl.exe",
-                "CXX": "C:/Program Files (x86)/Microsoft Visual Studio/2022/BuildTools/VC/Tools/MSVC/14.33.31629/bin/HostX64/x86/cl.exe"
-            },
+            //"env": {
+            //    "CC": "C:/Program Files (x86)/Microsoft Visual Studio/2022/BuildTools/VC/Tools/MSVC/14.33.31629/bin/HostX64/x86/cl.exe",
+            //    "CXX": "C:/Program Files (x86)/Microsoft Visual Studio/2022/BuildTools/VC/Tools/MSVC/14.33.31629/bin/HostX64/x86/cl.exe"
+            //},
             "console": "integratedTerminal"
         }
     ]

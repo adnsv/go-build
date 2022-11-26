@@ -1,8 +1,12 @@
 package msvc
 
 import (
+	"errors"
 	"fmt"
 	"io"
+	"os/exec"
+	"regexp"
+	"strings"
 )
 
 // Installation corresponds to an instance of VisualStudio
@@ -27,4 +31,19 @@ func (i *Installation) PrintSummary(w io.Writer) {
 	if i.IsPrerelease {
 		fmt.Fprintf(w, "- this is a pre-release build")
 	}
+}
+
+var reVersion = regexp.MustCompile("^Microsoft .*Version (.*) for (.*)")
+
+func QueryVersion(exe string) (ver, target string, err error) {
+	cmd := exec.Command(exe)
+	buf, err := cmd.CombinedOutput()
+	if err != nil {
+		return "", "", err
+	}
+	match := reVersion.FindStringSubmatch(string(buf))
+	if len(match) != 3 {
+		return "", "", errors.New("unsupported version output")
+	}
+	return match[1], strings.TrimSpace(match[2]), nil
 }

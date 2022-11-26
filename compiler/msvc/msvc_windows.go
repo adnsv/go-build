@@ -8,7 +8,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"regexp"
 	"runtime"
 	"sort"
 	"strconv"
@@ -196,21 +195,6 @@ var msvcEnvVars = []string{
 	"WINDOWSSDKLIBVERSION",
 	"WINDOWSSDKVERSION",
 	"VISUALSTUDIOVERSION",
-}
-
-var reVersion = regexp.MustCompile("^Microsoft .*Version (.*) for (.*)")
-
-func QueryVersion(exe string) (ver, target string, err error) {
-	cmd := exec.Command(exe)
-	buf, err := cmd.CombinedOutput()
-	if err != nil {
-		return "", "", err
-	}
-	match := reVersion.FindStringSubmatch(string(buf))
-	if len(match) != 3 {
-		return "", "", errors.New("unsupported version output")
-	}
-	return match[1], strings.TrimSpace(match[2]), nil
 }
 
 func TestArches(inst *Installation, feedback func(string)) []*toolchain.Chain {
