@@ -3,8 +3,8 @@ package gcc
 import (
 	"errors"
 	"os/exec"
-	"path/filepath"
 	"regexp"
+	"runtime"
 	"strings"
 )
 
@@ -67,6 +67,12 @@ func ExtractIncludePaths(exe string, lang string) []string {
 	lines := strings.Split(string(buf), "\n")
 	ret := []string{}
 	includeLine := false
+
+	fixpath := func(s string) string { return s }
+	if runtime.GOOS != "windows" && strings.HasPrefix(exe, "/mnt/") {
+		fixpath = fixWSLpath
+	}
+
 	for _, line := range lines {
 		line = strings.TrimRight(line, "\r")
 		if includeLine {
@@ -74,11 +80,24 @@ func ExtractIncludePaths(exe string, lang string) []string {
 				includeLine = false
 				continue
 			}
-			line = filepath.ToSlash(strings.TrimSpace(line))
+			line = strings.TrimSpace(line)
+			line = fixpath(line)
 			ret = append(ret, line)
 		} else if line == "#include <...> search starts here:" {
 			includeLine = true
 		}
 	}
 	return ret
+}
+
+func fixWSLpath(p string) string {
+	if len(p) < 3 {
+		return p
+	}
+	if p[1] == ':' && (p[2] == '\\' || p[2] == '/') {
+		ret := "/mnt/" + strings.ToLower(p[:1]) + "/" + strings.ReplaceAll(p[3:], "\\", "/")
+		return ret
+	} else {
+		return p
+	}
 }

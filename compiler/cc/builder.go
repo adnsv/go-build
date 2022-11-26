@@ -43,13 +43,17 @@ func FromEnv() (*Builder, error) {
 	b := &Builder{
 		Tools: toolchain.Toolset{},
 	}
-	cc := os.Getenv("cc")
-	cxx := os.Getenv("cxx")
+	cc := os.Getenv("CC")
+	cxx := os.Getenv("CXX")
 	if cc == "" && cxx == "" {
 		return nil, errors.New("missing CC/CXX environment vars")
 	}
 
 	compilers := map[string]struct{}{} // multiple compiler detector
+	dirs := map[string]struct{}{}
+
+	cc_infix := ""
+	cxx_infix := ""
 
 	if cc != "" {
 		cc, err := filepath.Abs(cc)
@@ -64,14 +68,18 @@ func FromEnv() (*Builder, error) {
 		switch {
 		case exe == "cl":
 			b.Compiler = "MSVC"
-		case exe == "clang":
+			cc_infix = "cl"
+		case strings.Contains(exe, "clang"):
 			b.Compiler = "CLANG"
-		case strings.HasSuffix(exe, "gcc"):
+			cc_infix = "clang"
+		case strings.Contains(exe, "gcc"):
 			b.Compiler = "GCC"
+			cc_infix = "gcc"
 		}
 		if b.Compiler != "" {
 			compilers[b.Compiler] = struct{}{}
 		}
+		dirs[filepath.Dir(cc)] = struct{}{}
 	}
 
 	if cxx != "" {
@@ -83,18 +91,22 @@ func FromEnv() (*Builder, error) {
 			return nil, fmt.Errorf("invalid CXX path: %w", err)
 		}
 		b.Tools[toolchain.CXXCompiler] = filepath.ToSlash(cxx)
-		exe := executableStem(cc)
+		exe := executableStem(cxx)
 		switch {
 		case exe == "cl":
 			b.Compiler = "MSVC"
-		case exe == "clang":
+			cxx_infix = "cl"
+		case strings.Contains(exe, "clang"):
 			b.Compiler = "CLANG"
-		case strings.HasSuffix(exe, "g++"):
+			cxx_infix = "clang"
+		case strings.Contains(exe, "g++"):
 			b.Compiler = "GCC"
+			cxx_infix = "g++"
 		}
 		if b.Compiler != "" {
 			compilers[b.Compiler] = struct{}{}
 		}
+		dirs[filepath.Dir(cc)] = struct{}{}
 	}
 
 	if len(compilers) > 1 {
@@ -152,6 +164,43 @@ func FromEnv() (*Builder, error) {
 		return nil, fmt.Errorf("unsupported compiler type")
 	}
 
+	if b.Compiler == "MSVC" {
+
+	} else {
+		check := func(tool toolchain.Tool, envvar string, names ...string) {
+			if _, have := b.Tools[tool]; have {
+				return
+			}
+			if envvar != "" {
+				if v := os.Getenv(envvar); v != "" {
+					b.Tools[tool] = v
+					return
+				}
+			}
+			if cxx_infix != "" {
+				if fn := FindTool(cxx, cxx_infix, tool, names...); fn != "" {
+					b.Tools[tool] = fn
+					return
+				}
+			} else {
+				if fn := FindTool(cxx, cc_infix, tool, names...); fn != "" {
+					b.Tools[tool] = fn
+					return
+				}
+			}
+		}
+		check(toolchain.CXXCompiler, "CXX", "g++", "c++")
+		check(toolchain.Archiver, "AR", "ar", "gcc-ar")
+		check(toolchain.ASMCompiler, "AS", "as", "gcc-as")
+		check(toolchain.DLLLinker, "", "ld", "gcc-ld")
+		check(toolchain.EXELinker, "", "ld", "gcc-ld")
+		check(toolchain.OBJCopy, "", "objcopy", "gcc-objcopy")
+		check(toolchain.OBJDump, "", "objdump", "gcc-objdump")
+		check(toolchain.Runlib, "", "runlib", "gcc-runlib")
+		check(toolchain.ResourceCompiler, "", "windres", "gcc-windres")
+		check(toolchain.Strip, "", "strip", "gcc-strip")
+	}
+
 	return b, nil
 }
 
@@ -169,4 +218,20 @@ func (b *Builder) PrintSummary(w io.Writer) {
 	if b.FullVersion != "" {
 		fmt.Fprintf(w, "- full version: '%s'\n", b.FullVersion)
 	}
+}
+
+func FindTool(base, infix string, tool toolchain.Tool, names ...string) string {
+
+	i, n := strings.LastIndex(base, infix), len(infix)
+	if i < 0 {
+		return ""
+	}
+
+	for _, tn := range names {
+		if t := base[:i] + tn + base[i+n:]; filesystem.FileExists(t) {
+			return t
+		}
+
+	}
+	return ""
 }

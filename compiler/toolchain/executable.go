@@ -96,23 +96,25 @@ func CCompilerScore(target, cc, version, fn string) int {
 }
 
 func (x *Executable) FindTool(cc string, names ...string) string {
+	n := len(cc)
+
 	for _, tn := range names {
 		fn := x.PrimaryPath
 		if i := strings.LastIndex(fn, cc); i >= 0 {
-			if t := fn[:i] + tn + fn[i+3:]; filesystem.FileExists(t) {
+			if t := fn[:i] + tn + fn[i+n:]; filesystem.FileExists(t) {
 				return t
 			}
 		}
 		for _, fn = range x.OtherPaths {
 			if i := strings.LastIndex(fn, cc); i >= 0 {
-				if t := fn[:i] + tn + fn[i+3:]; filesystem.FileExists(t) {
+				if t := fn[:i] + tn + fn[i+n:]; filesystem.FileExists(t) {
 					return t
 				}
 			}
 		}
 		for _, fn = range x.SymLinks {
 			if i := strings.LastIndex(fn, cc); i >= 0 {
-				if t := fn[:i] + tn + fn[i+3:]; filesystem.FileExists(t) {
+				if t := fn[:i] + tn + fn[i+n:]; filesystem.FileExists(t) {
 					return t
 				}
 			}
