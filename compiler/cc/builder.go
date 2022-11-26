@@ -118,10 +118,10 @@ type Builder struct {
 	ExtDLL string
 	ExtEXE string
 
-	BindOBJ        func(obj_fn, src string) []string
-	BindAR         func(ar_fn string, obj_fns ...string) []string
-	BindCompilePDB func(pdb_fn string) []string
-	BindLinkPDB    func(pdb_fn string) []string
+	BindOBJ func(obj_fn, src string) []string
+	BindAR  func(ar_fn string, obj_fns ...string) []string
+	//BindCompilePDB func(pdb_fn string) []string
+	//BindLinkPDB    func(pdb_fn string) []string
 	BindIncludeDir func(dir string) string
 
 	//	wantPDB bool
@@ -264,7 +264,7 @@ func (b *Builder) ConfigureDefaults(options ...BuilderOption) {
 		b.BindAR = BindArGCC
 		//		b.BindCompilePDB = BindCompilePdbDummy
 		//		b.BindLinkPDB = BindLinkPdbDummy
-		b.BindIncludeDir = BindIncludeDirMSVC
+		b.BindIncludeDir = BindIncludeDirGCC
 
 		b.FlagsC.Add(All)
 		b.FlagsC.Add(Debug, "-g")
