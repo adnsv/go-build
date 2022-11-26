@@ -3,6 +3,7 @@ package cc
 import (
 	"fmt"
 	"io"
+	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -393,6 +394,7 @@ func (b *Builder) Compile(ctx *BuildContext, src_fn, obj_fn string) error {
 	args := flags
 
 	cmd := exec.Command(exe, args...)
+	log.Printf("running: %v", cmd)
 	cmd.Dir = ctx.SrcDir
 	cmd.Env = ctx.Environment
 	cmd.Stdout = ctx.Stdout
