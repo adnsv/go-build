@@ -58,7 +58,7 @@ func (cmd *DiscoverToolchains) Run(ctx *kong.Context) error {
 	} else {
 		tt := compiler.DiscoverToolchains(true, cmd.Type, feedback)
 		if cmd.Native {
-			tt = compiler.FindNative(tt)
+			tt = compiler.Natives(tt)
 		}
 		switch cmd.Format {
 		case "json":

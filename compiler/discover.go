@@ -117,13 +117,14 @@ func FindOsArch(os, arch string, tt []*toolchain.Chain) []*toolchain.Chain {
 	return ret
 }
 
-func FindNative(tt []*toolchain.Chain) []*toolchain.Chain {
+func Natives(tt []*toolchain.Chain) []*toolchain.Chain {
 	os := runtime.GOOS
 	arch := runtime.GOARCH
 	return FindOsArch(os, arch, tt)
 }
 
 func ChooseNative(tt []*toolchain.Chain, order_of_preference ...string) *toolchain.Chain {
+	tt = Natives(tt)
 	if len(tt) <= 0 {
 		return nil
 	} else if len(tt) == 0 {
