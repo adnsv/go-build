@@ -361,7 +361,7 @@ func (b *Builder) NewBuildContext(cfg BuildConfig, srcdir, objdir, libdir string
 //	ctx.FlagsEXE = append(ctx.FlagsEXE, b.BindLinkerPDB(pdb_fn)...)
 //}
 
-func (b *Builder) IncludeDirs(ctx *BuildContext, dirs Dirs) {
+func (ctx *BuildContext) IncludeDirs(dirs ...string) {
 	ctx.IncludeDirsC.Prepend("", dirs...)
 	ctx.IncludeDirsCXX.Prepend("", dirs...)
 }
