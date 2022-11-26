@@ -378,6 +378,7 @@ func (b *Builder) Compile(ctx *BuildContext, src_fn, obj_fn string) error {
 		for _, i := range ctx.IncludeDirsC {
 			flags = append(flags, b.BindIncludeDir(i))
 		}
+		flags = append(flags, b.BindOBJ(obj_fn, src_fn)...)
 		exe = b.Tools[toolchain.CCompiler]
 
 	case ".cxx", ".cc", ".cpp":
@@ -385,6 +386,7 @@ func (b *Builder) Compile(ctx *BuildContext, src_fn, obj_fn string) error {
 		for _, i := range ctx.IncludeDirsCXX {
 			flags = append(flags, b.BindIncludeDir(i))
 		}
+		flags = append(flags, b.BindOBJ(obj_fn, src_fn)...)
 		exe = b.Tools[toolchain.CCompiler]
 
 	default:
