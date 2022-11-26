@@ -86,14 +86,22 @@ func DiscoverInstallations(feedback func(string)) ([]*Installation, error) {
 
 	installations := make([]*Installation, 0, len(tmp))
 	for _, i := range tmp {
-		installations = append(installations, &Installation{
+		inst := &Installation{
 			InstanceID:          i.InstanceID,
 			DisplayName:         i.DisplayName,
 			InstallationPath:    filepath.ToSlash(i.InstallationPath),
 			InstallationVersion: i.InstallationVersion,
 			Description:         i.Description,
 			IsPrerelease:        i.IsPrerelease,
-		})
+		}
+
+		toolsetver_fn := filepath.Join(i.InstallationPath, "VC", "Auxiliary", "Build", "Microsoft.VCToolsVersion.default.txt")
+		if filesystem.FileExists(toolsetver_fn) {
+			if buf, err := os.ReadFile(toolsetver_fn); err == nil {
+				inst.ToolsetVersion = strings.TrimSpace(string(buf))
+			}
+		}
+		installations = append(installations, inst)
 	}
 
 	// sort, latest versions first
@@ -280,6 +288,7 @@ func TestArches(inst *Installation, feedback func(string)) []*toolchain.Chain {
 			VisualStudioArch:    arch,
 			VisualStudioVersion: vars["VISUALSTUDIOVERSION"],
 			UCRTVersion:         vars["UCRTVERSION"],
+			ToolsetVersion:      inst.ToolsetVersion,
 			Tools:               map[toolchain.Tool]string{},
 		}
 
