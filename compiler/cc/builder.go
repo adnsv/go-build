@@ -10,7 +10,40 @@ import (
 	"strings"
 
 	"github.com/adnsv/go-build/compiler/toolchain"
+	"golang.org/x/exp/slices"
 )
+
+type Dirs []string
+
+func (d *Dirs) Prepend(relbase string, dirs ...string) []string {
+	// keep order, remove duplicates
+	acc := map[string]struct{}{}
+	ret := make([]string, 0, len(*d)+len(dirs))
+	for _, dir := range dirs {
+		if relbase != "" {
+			if filepath.IsAbs(dir) {
+				rel, err := filepath.Rel(relbase, dir)
+				if err == nil {
+					dir = rel
+				}
+			}
+		}
+		dir = filepath.ToSlash(dir)
+		if _, exists := acc[dir]; exists {
+			continue
+		}
+		ret = append(ret, dir)
+		acc[dir] = struct{}{}
+	}
+	for _, dir := range *d {
+		if _, exists := acc[dir]; exists {
+			continue
+		}
+		ret = append(ret, dir)
+		acc[dir] = struct{}{}
+	}
+	return ret
+}
 
 type Core struct {
 	Compiler       string            `json:"compiler" yaml:"compiler"` // MSVC/GCC/CLANG
@@ -264,11 +297,14 @@ type BuildContext struct {
 	FlagsEXE    []string
 	FlagsRC     []string
 
+	IncludeDirsC   Dirs
+	IncludeDirsCXX Dirs
+
 	SrcDir      string // all source files are specified relative to this dir
 	ObjDir      string // all object files are placed here in subdirs
 	LibDir      string
-	LibraryDirs []string
-	Environment []string
+	LibraryDirs Dirs
+	Environment Dirs
 
 	PDBfn  string
 	Stdout io.Writer
@@ -298,10 +334,10 @@ func (b *Builder) NewBuildContext(cfg BuildConfig, srcdir, objdir, libdir string
 		ObjDir:      objdir,
 		LibDir:      libdir,
 	}
-	ctx.FlagsC = append(ctx.FlagsC, b.CCIncludeDirs...)
-	ctx.FlagsC = append(ctx.FlagsC, cfg_flags(b.FlagsC)...)
-	ctx.FlagsCXX = append(ctx.FlagsC, b.CXXIncludeDirs...)
-	ctx.FlagsCXX = append(ctx.FlagsC, cfg_flags(b.FlagsCXX)...)
+	ctx.IncludeDirsC = Dirs(slices.Clone(b.CCIncludeDirs))
+	ctx.IncludeDirsCXX = Dirs(slices.Clone(b.CXXIncludeDirs))
+	ctx.FlagsC = cfg_flags(b.FlagsC)
+	ctx.FlagsCXX = cfg_flags(b.FlagsCXX)
 	ctx.FlagsC = cfg_flags(b.FlagsC)
 	ctx.FlagsCXX = cfg_flags(b.FlagsCXX)
 	ctx.FlagsAR = cfg_flags(b.FlagsAR)
@@ -325,17 +361,29 @@ func (b *Builder) NewBuildContext(cfg BuildConfig, srcdir, objdir, libdir string
 //	ctx.FlagsEXE = append(ctx.FlagsEXE, b.BindLinkerPDB(pdb_fn)...)
 //}
 
+func (b *Builder) IncludeDirs(ctx *BuildContext, dirs Dirs) {
+	ctx.IncludeDirsC.Prepend("", dirs...)
+	ctx.IncludeDirsCXX.Prepend("", dirs...)
+}
+
 func (b *Builder) Compile(ctx *BuildContext, src_fn, obj_fn string) error {
 	ext := strings.ToLower(filepath.Ext(src_fn))
+
 	var flags []string
 	exe := ""
 	switch ext {
 	case ".c":
 		flags = ctx.FlagsC
+		for _, i := range ctx.IncludeDirsC {
+			flags = append(flags, b.BindIncludeDir(i))
+		}
 		exe = b.Tools[toolchain.CCompiler]
 
 	case ".cxx", ".cc", ".cpp":
 		flags = ctx.FlagsCXX
+		for _, i := range ctx.IncludeDirsCXX {
+			flags = append(flags, b.BindIncludeDir(i))
+		}
 		exe = b.Tools[toolchain.CCompiler]
 
 	default:
