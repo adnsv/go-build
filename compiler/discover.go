@@ -123,7 +123,7 @@ func FindNative(tt []*toolchain.Chain) []*toolchain.Chain {
 	return FindOsArch(os, arch, tt)
 }
 
-func Choose(tt []*toolchain.Chain, prefer_compiler []string) *toolchain.Chain {
+func ChooseNative(tt []*toolchain.Chain, order_of_preference ...string) *toolchain.Chain {
 	if len(tt) <= 0 {
 		return nil
 	} else if len(tt) == 0 {
@@ -155,10 +155,10 @@ func Choose(tt []*toolchain.Chain, prefer_compiler []string) *toolchain.Chain {
 		return sel[len(sel)-1]
 	}
 
-	if prefer_compiler == nil {
-		prefer_compiler = []string{"gcc", "clang", "msvc"}
+	if order_of_preference == nil {
+		order_of_preference = []string{"gcc", "clang", "msvc"}
 	}
-	for _, c := range prefer_compiler {
+	for _, c := range order_of_preference {
 		r := handle_compiler(c)
 		if r != nil {
 			return r
