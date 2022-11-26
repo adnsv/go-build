@@ -171,6 +171,46 @@ func (v VersionQuad) Compare(o VersionQuad) int {
 	return 0
 }
 
+func Compare(c1, c2 *toolchain.Chain) int {
+	q1, e1 := ParseVersionQuad(c1.Version)
+	q2, e2 := ParseVersionQuad(c2.Version)
+	if e1 == nil && e2 == nil {
+		if i := q1.Compare(q2); i != 0 {
+			return i
+		}
+	} else if e1 == nil {
+		return -1
+	} else if e2 == nil {
+		return +1
+	}
+	q1, e1 = ParseVersionQuad(c1.WindowsSDKVersion)
+	q2, e2 = ParseVersionQuad(c1.WindowsSDKVersion)
+	if e1 == nil && e2 == nil {
+		if i := q1.Compare(q2); i != 0 {
+			return i
+		}
+	} else if e1 == nil {
+		return -1
+	} else if e2 == nil {
+		return +1
+	}
+	q1, e1 = ParseVersionQuad(c1.UCRTVersion)
+	q2, e2 = ParseVersionQuad(c1.UCRTVersion)
+	if e1 == nil && e2 == nil {
+		if i := q1.Compare(q2); i != 0 {
+			return i
+		}
+	} else if e1 == nil {
+		return -1
+	} else if e2 == nil {
+		return +1
+	}
+	if i := strings.Compare(c1.FullVersion, c2.FullVersion); i != 0 {
+		return i
+	}
+	return strings.Compare(c1.InstalledDir, c2.InstalledDir)
+}
+
 var msvcEnvVars = []string{
 	"CL",
 	"_CL_",

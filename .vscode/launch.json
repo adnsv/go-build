@@ -15,6 +15,7 @@
                 "discover-toolchains", 
                 "--format=yaml",
                 "--verbose",
+                "--native",
                 "--output=testdata/toolchains.yaml"],
             "console": "integratedTerminal"
         },

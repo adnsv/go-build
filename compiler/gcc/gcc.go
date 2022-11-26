@@ -18,6 +18,8 @@ type Ver struct {
 	ThreadModel    string   `json:"thread-model" yaml:"thread-model"`
 	CCIncludeDirs  []string `json:"cc-include-dirs" yaml:"cc-include-dirs"`
 	CXXIncludeDirs []string `json:"cxx-include-dirs" yaml:"cxx-include-dirs"`
+	Languages      []string `json:"languages,omitempty" yaml:"languages,omitempty"`
+	WithArch       string   `json:"with-arch,omitempty" yaml:"with-arch,omitempty"`
 }
 
 type Installation struct {

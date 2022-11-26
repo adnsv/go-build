@@ -2,10 +2,14 @@ package gcc
 
 import (
 	"errors"
+	"fmt"
 	"os/exec"
 	"regexp"
 	"runtime"
 	"strings"
+
+	"github.com/adnsv/go-build/compiler/toolchain"
+	"github.com/blang/semver"
 )
 
 var reVersion = regexp.MustCompile("gcc version (.*?) .*")
@@ -52,6 +56,15 @@ func QueryVersion(exe string) (*Ver, error) {
 		if len(match) == 2 {
 			ret.ThreadModel = strings.TrimSpace(match[1])
 		}
+		const configuredWithPrefix = "Configured with: "
+		if strings.HasPrefix(line, configuredWithPrefix) {
+			line = strings.TrimPrefix(line, configuredWithPrefix)
+			configs, err := parseConfig(line)
+			if err == nil {
+				ret.Languages = strings.Split(configs["enable-languages"], ",")
+				ret.WithArch = configs["with-arch"]
+			}
+		}
 	}
 	ret.CCIncludeDirs = append(ret.CCIncludeDirs, ExtractIncludePaths(exe, "c")...)
 	ret.CXXIncludeDirs = append(ret.CXXIncludeDirs, ExtractIncludePaths(exe, "c++")...)
@@ -90,6 +103,25 @@ func ExtractIncludePaths(exe string, lang string) []string {
 	return ret
 }
 
+func Compare(c1, c2 *toolchain.Chain) int {
+	v1, e1 := semver.ParseTolerant(c1.Version)
+	v2, e2 := semver.ParseTolerant(c2.Version)
+	if e1 == nil && e2 == nil {
+		v1.Compare(v2)
+	} else if e1 == nil {
+		return -1
+	} else if e2 == nil {
+		return +1
+	}
+	if i := strings.Compare(c1.Target, c2.Target); i != 0 {
+		return i
+	}
+	if i := strings.Compare(c1.FullVersion, c2.FullVersion); i != 0 {
+		return i
+	}
+	return strings.Compare(c1.Tools[toolchain.CXXCompiler], c2.Tools[toolchain.CXXCompiler])
+}
+
 func fixWSLpath(p string) string {
 	if len(p) < 3 {
 		return p
@@ -100,4 +132,53 @@ func fixWSLpath(p string) string {
 	} else {
 		return p
 	}
+}
+
+func parseConfig(s string) (map[string]string, error) {
+	i, n := 0, len(s)
+	for i < n && s[i] < ' ' {
+		i++
+	}
+
+	key_char := func(c byte) bool {
+		return c >= 'a' && c <= 'z' || c == '-' || c >= '0' && c <= '9'
+	}
+	m := map[string]string{}
+
+	for i+2 < n {
+		if s[i] != '-' || s[i+1] != '-' {
+			i++
+			continue
+		}
+		i += 2
+		o := i
+		for i < n && key_char(s[i]) {
+			i++
+		}
+		key := s[o:i]
+		val := ""
+		if i < n && s[i] == '=' {
+			i++
+			o = i
+			if i < n && s[i] == '\'' {
+				i++
+				o = i
+				for i < n && s[i] != '\'' {
+					i++
+				}
+				if i == n || s[i] != '\'' {
+					return nil, fmt.Errorf("unterminated string literal")
+				}
+				val = s[o:i]
+				i++
+			} else {
+				for i < n && s[i] != ' ' {
+					i++
+				}
+				val = s[o:i]
+			}
+		}
+		m[key] = val
+	}
+	return m, nil
 }
