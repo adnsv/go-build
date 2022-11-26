@@ -25,12 +25,12 @@ func (cmd *TestEnv) Run(ctx *kong.Context) error {
 	var buf []byte
 	switch cmd.Format {
 	case "json":
-		buf, err = json.MarshalIndent(b, "", "  ")
+		buf, err = json.MarshalIndent(b.Core, "", "  ")
 	case "yaml":
-		buf, err = yaml.Marshal(b)
+		buf, err = yaml.Marshal(b.Core)
 	case "summary":
 		w := &bytes.Buffer{}
-		b.PrintSummary(w)
+		b.Core.PrintSummary(w)
 		buf = w.Bytes()
 	default:
 		return fmt.Errorf("unsupported format '%s'", cmd.Format)

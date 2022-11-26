@@ -45,10 +45,10 @@
                 "--format=yaml",
                 //"--output=testdata/installations.yaml"
             ],
-            "env": {
-                "CC": "/usr/bin/x86_64-linux-gnu-gcc-11",
-                "CXX": "/usr/bin/x86_64-linux-gnu-g++-11"
-            },
+            //"env": {
+            //    "CC": "/usr/bin/x86_64-linux-gnu-gcc-11",
+            //    "CXX": "/usr/bin/x86_64-linux-gnu-g++-11"
+            //},
             "console": "integratedTerminal"
         }
     ]

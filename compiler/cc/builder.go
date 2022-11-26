@@ -1,21 +1,18 @@
 package cc
 
 import (
-	"errors"
 	"fmt"
 	"io"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"sort"
 	"strings"
 
-	"github.com/adnsv/go-build/compiler/clang"
-	"github.com/adnsv/go-build/compiler/gcc"
-	"github.com/adnsv/go-build/compiler/msvc"
 	"github.com/adnsv/go-build/compiler/toolchain"
-	"github.com/adnsv/go-utils/filesystem"
 )
 
-type Builder struct {
+type Core struct {
 	Compiler       string            `json:"compiler" yaml:"compiler"` // MSVC/GCC/CLANG
 	Version        string            `json:"version" yaml:"version"`
 	FullVersion    string            `json:"full-version,omitempty" yaml:"full-version,omitempty"`
@@ -26,8 +23,83 @@ type Builder struct {
 	Environment    []string          `json:"environment,omitempty" yaml:"environment,omitempty"`
 }
 
+func BindObjMSVC(obj_fn, src string) []string {
+	return []string{"/Fo" + obj_fn, src}
+}
+
+func BindObjGCC(obj_fn, src string) []string {
+	return []string{"-o", obj_fn, "-c", src}
+}
+
+func BindArMSVC(ar_fn string, obj_fns ...string) []string {
+	ret := []string{"/OUT:" + ar_fn}
+	ret = append(ret, obj_fns...)
+	return ret
+}
+
+func BindArGCC(ar_fn string, obj_fns ...string) []string {
+	ret := []string{ar_fn}
+	ret = append(ret, obj_fns...)
+	return ret
+}
+
+func BindIncludeDirMSVC(dir string) string {
+	return "/I" + dir
+}
+
+func BindIncludeDirGCC(dir string) string {
+	return "-I" + dir
+}
+
+/*
+
+func BindCompilePdbMSVC(pdb_fn string) []string {
+	return []string{"/Fd" + pdb_fn, "/FS", "/Zf"}
+}
+
+func BindLinkPdbMSVC(pdb_fn string) []string {
+	return []string{"/PDB:" + pdb_fn}
+}
+
+func BindCompilePdbDummy(string) []string {
+	return nil
+}
+
+func BindLinkPdbDummy(string) []string {
+	return nil
+}
+*/
+
+type Builder struct {
+	Core
+
+	FlagsC   Flags // c-specific compiler flags to produce obj files
+	FlagsCXX Flags // c++-specific compiler flags to produce obj files
+	FlagsAR  Flags
+	FlagsDLL Flags
+	FlagsEXE Flags
+	FlagsRC  Flags
+
+	ExtOBJ string
+	ExtAR  string
+	ExtDLL string
+	ExtEXE string
+
+	BindOBJ        func(obj_fn, src string) []string
+	BindAR         func(ar_fn string, obj_fns ...string) []string
+	BindCompilePDB func(pdb_fn string) []string
+	BindLinkPDB    func(pdb_fn string) []string
+	BindIncludeDir func(dir string) string
+
+	//	wantPDB bool
+
+	WorkDir string
+	Stdout  io.Writer
+	Stderr  io.Writer
+}
+
 func FromChain(tc toolchain.Chain) *Builder {
-	return &Builder{
+	return &Builder{Core: Core{
 		Tools:          tc.Tools,
 		Compiler:       tc.Compiler,
 		Version:        tc.Version,
@@ -36,202 +108,263 @@ func FromChain(tc toolchain.Chain) *Builder {
 		CXXIncludeDirs: tc.CXXIncludeDirs,
 		LibraryDirs:    tc.LibraryDirs,
 		Environment:    tc.Environment,
-	}
+	}}
 }
 
-func FromEnv() (*Builder, error) {
-	b := &Builder{
-		Tools: toolchain.Toolset{},
-	}
-	cc := os.Getenv("CC")
-	cxx := os.Getenv("CXX")
-	if cc == "" && cxx == "" {
-		return nil, errors.New("missing CC/CXX environment vars")
-	}
+type BuilderOption int
 
-	compilers := map[string]struct{}{} // multiple compiler detector
-	dirs := map[string]struct{}{}
+const (
+	BuildMsvcRuntimeDLL = BuilderOption(1 << iota)
+	//	BuildWithPDB
+	C11
+	C17
+	CXX14
+	CXX17
+	CXX20
+	CXXLatest
+)
 
-	cc_infix := ""
-	cxx_infix := ""
+func (b *Builder) ConfigureDefaults(options ...BuilderOption) {
 
-	if cc != "" {
-		cc, err := filepath.Abs(cc)
-		if err == nil {
-			err = filesystem.ValidateFileExists(cc)
-		}
-		if err != nil {
-			return nil, fmt.Errorf("invalid CC path: %w", err)
-		}
-		b.Tools[toolchain.CCompiler] = filepath.ToSlash(cc)
-		exe := executableStem(cc)
-		switch {
-		case exe == "cl":
-			b.Compiler = "MSVC"
-			cc_infix = "cl"
-		case strings.Contains(exe, "clang"):
-			b.Compiler = "CLANG"
-			cc_infix = "clang"
-		case strings.Contains(exe, "gcc"):
-			b.Compiler = "GCC"
-			cc_infix = "gcc"
-		}
-		if b.Compiler != "" {
-			compilers[b.Compiler] = struct{}{}
-		}
-		dirs[filepath.Dir(cc)] = struct{}{}
-	}
+	c11 := false
+	c17 := false
+	cxx14 := false
+	cxx17 := false
+	cxx20 := false
+	cxxLatest := false
 
-	if cxx != "" {
-		cxx, err := filepath.Abs(cxx)
-		if err == nil {
-			err = filesystem.ValidateFileExists(cxx)
+	with_mt := true
+	for _, opt := range options {
+		switch opt {
+		case BuildMsvcRuntimeDLL:
+			with_mt = false
+			//		case BuildWithPDB:
+			//			b.wantPDB = true
+		case C11:
+			c11 = true
+		case C17:
+			c17 = true
+		case CXX14:
+			cxx14 = true
+		case CXX17:
+			cxx17 = true
+		case CXX20:
+			cxx20 = true
+		case CXXLatest:
+			cxxLatest = true
 		}
-		if err != nil {
-			return nil, fmt.Errorf("invalid CXX path: %w", err)
-		}
-		b.Tools[toolchain.CXXCompiler] = filepath.ToSlash(cxx)
-		exe := executableStem(cxx)
-		switch {
-		case exe == "cl":
-			b.Compiler = "MSVC"
-			cxx_infix = "cl"
-		case strings.Contains(exe, "clang"):
-			b.Compiler = "CLANG"
-			cxx_infix = "clang"
-		case strings.Contains(exe, "g++"):
-			b.Compiler = "GCC"
-			cxx_infix = "g++"
-		}
-		if b.Compiler != "" {
-			compilers[b.Compiler] = struct{}{}
-		}
-		dirs[filepath.Dir(cc)] = struct{}{}
-	}
-
-	if len(compilers) > 1 {
-		return nil, fmt.Errorf("inconsistent compiler types detected")
-	}
-
-	if b.Compiler == "" || b.Compiler == "GCC" {
-		var v *gcc.Ver
-		var err error
-		if cxx != "" {
-			v, err = gcc.QueryVersion(cxx)
-		} else {
-			v, err = gcc.QueryVersion(cc)
-		}
-		if err == nil {
-			b.Compiler = "GCC"
-			b.CCIncludeDirs = v.CCIncludeDirs
-			b.CXXIncludeDirs = v.CXXIncludeDirs
-			b.Version = v.Version
-			b.FullVersion = v.FullVersion
-		}
-	}
-	if b.Compiler == "" || b.Compiler == "CLANG" {
-		var v *clang.Ver
-		var err error
-		if cxx != "" {
-			v, err = clang.QueryVersion(cxx)
-		} else {
-			v, err = clang.QueryVersion(cc)
-		}
-		if err == nil {
-			b.Compiler = "CLANG"
-			b.CCIncludeDirs = v.CCIncludeDirs
-			b.CXXIncludeDirs = v.CXXIncludeDirs
-			b.Version = v.Version
-			b.FullVersion = v.FullVersion
-		}
-	}
-	if b.Compiler == "" || b.Compiler == "MSVC" {
-		var ver string
-		//var target string
-		var err error
-		if cxx != "" {
-			ver, _, err = msvc.QueryVersion(cxx)
-		} else {
-			ver, _, err = msvc.QueryVersion(cc)
-		}
-		if err == nil {
-			b.Compiler = "MSVC"
-			b.Version = ver
-		}
-	}
-
-	if b.Compiler == "" {
-		return nil, fmt.Errorf("unsupported compiler type")
 	}
 
 	if b.Compiler == "MSVC" {
+		b.ExtOBJ = ".obj"
+		b.ExtAR = ".lib"
+		b.ExtDLL = ".dll"
+		b.ExtEXE = ".exe"
+
+		b.BindOBJ = BindObjMSVC
+		b.BindAR = BindArMSVC
+		//		b.BindCompilePDB = BindCompilePdbMSVC
+		//		b.BindLinkPDB = BindLinkPdbMSVC
+		b.BindIncludeDir = BindIncludeDirMSVC
+
+		b.FlagsC.Add(All, "/nologo", "/DWIN32", "/D_WINDOWS")
+		b.FlagsC.Add(Debug, "/Zi", "/Ob0", "/Od", "/RTC1")
+		b.FlagsC.Add(Release, "/O2", "/Ob2", "/DNDEBUG")
+		b.FlagsC.Add(MinSizeRel, "/O1", "/Ob1", "/DNDEBUG")
+		b.FlagsC.Add(RelWithDebInfo, "/Zi", "/O2", "/Ob1", "/DNDEBUG")
+
+		b.FlagsCXX.Add(All, "/nologo", "/DWIN32", "/D_WINDOWS", "/EHsc")
+		b.FlagsCXX.Add(Debug, "/Zi", "/Ob0", "/Od", "/RTC1")
+		b.FlagsCXX.Add(Release, "/O2", "/Ob2", "/DNDEBUG")
+		b.FlagsCXX.Add(MinSizeRel, "/O1", "/Ob1", "/DNDEBUG")
+		b.FlagsCXX.Add(RelWithDebInfo, "/Zi", "/O2", "/Ob1", "/DNDEBUG")
+
+		if with_mt {
+			b.FlagsC.Add(Debug, "/MTd")
+			b.FlagsC.Add(Release, "/MT")
+			b.FlagsC.Add(MinSizeRel, "/MT")
+			b.FlagsC.Add(RelWithDebInfo, "/MTd")
+			b.FlagsCXX.Add(Debug, "/MTd")
+			b.FlagsCXX.Add(Release, "/MT")
+			b.FlagsCXX.Add(MinSizeRel, "/MT")
+			b.FlagsCXX.Add(RelWithDebInfo, "/MTd")
+		}
+		if cxxLatest {
+			b.FlagsCXX.Add(All, "/std:c++latest")
+		} else if cxx20 {
+			b.FlagsCXX.Add(All, "/std:c++20")
+		} else if cxx17 {
+			b.FlagsCXX.Add(All, "/std:c++17")
+		} else if cxx14 {
+			b.FlagsCXX.Add(All, "/std:c++14")
+		}
+		if c17 {
+			b.FlagsC.Add(All, "/std:c17")
+		} else if c11 {
+			b.FlagsC.Add(All, "/std:c11")
+		}
+
+		b.FlagsAR.Add(All, "/machine:x64")
+
+		b.FlagsDLL.Add(All, "/machine:x64")
+		b.FlagsDLL.Add(Debug, "/debug", "/INCREMENTAL")
+		b.FlagsDLL.Add(Release, "/INCREMENTAL:NO")
+		b.FlagsDLL.Add(MinSizeRel, "/INCREMENTAL:NO")
+		b.FlagsDLL.Add(RelWithDebInfo, "/debug", "/INCREMENTAL")
+
+		b.FlagsEXE.Add(All, "/machine:x64")
+		b.FlagsEXE.Add(Debug, "/debug", "/INCREMENTAL")
+		b.FlagsEXE.Add(Release, "/INCREMENTAL:NO")
+		b.FlagsEXE.Add(MinSizeRel, "/INCREMENTAL:NO")
+		b.FlagsEXE.Add(RelWithDebInfo, "/debug", "/INCREMENTAL")
+
+		b.FlagsRC.Add(All, "-DWIN32")
+		b.FlagsRC.Add(Debug, "-D_DEBUG")
 
 	} else {
-		check := func(tool toolchain.Tool, envvar string, names ...string) {
-			if _, have := b.Tools[tool]; have {
-				return
-			}
-			if envvar != "" {
-				if v := os.Getenv(envvar); v != "" {
-					b.Tools[tool] = v
-					return
-				}
-			}
-			if cxx_infix != "" {
-				if fn := FindTool(cxx, cxx_infix, tool, names...); fn != "" {
-					b.Tools[tool] = fn
-					return
-				}
-			} else {
-				if fn := FindTool(cxx, cc_infix, tool, names...); fn != "" {
-					b.Tools[tool] = fn
-					return
-				}
-			}
+		b.ExtOBJ = ".o"
+		b.ExtAR = ".a"
+		b.ExtDLL = ".so"
+		b.ExtEXE = ""
+
+		b.BindOBJ = BindObjGCC
+		b.BindAR = BindArGCC
+		//		b.BindCompilePDB = BindCompilePdbDummy
+		//		b.BindLinkPDB = BindLinkPdbDummy
+		b.BindIncludeDir = BindIncludeDirMSVC
+
+		b.FlagsC.Add(All)
+		b.FlagsC.Add(Debug, "-g")
+		b.FlagsC.Add(Release, "-O3", "-DNDEBUG")
+		b.FlagsC.Add(MinSizeRel, "-Os", "-DNDEBUG")
+		b.FlagsC.Add(RelWithDebInfo, "-O2", "-g", "-DNDEBUG")
+
+		b.FlagsCXX.Add(All)
+		b.FlagsCXX.Add(Debug, "-g")
+		b.FlagsCXX.Add(Release, "-O3", "-DNDEBUG")
+		b.FlagsCXX.Add(MinSizeRel, "-Os", "-DNDEBUG")
+		b.FlagsCXX.Add(RelWithDebInfo, "-O2", "-g", "-DNDEBUG")
+
+		b.FlagsAR.Add(All)
+
+		b.FlagsDLL.Add(All)
+
+		b.FlagsEXE.Add(All)
+
+		b.FlagsRC.Add(All)
+	}
+}
+
+type BuildContext struct {
+	BuildConfig BuildConfig
+	FlagsC      []string
+	FlagsCXX    []string
+	FlagsAR     []string
+	FlagsDLL    []string
+	FlagsEXE    []string
+	FlagsRC     []string
+
+	SrcDir      string // all source files are specified relative to this dir
+	ObjDir      string // all object files are placed here in subdirs
+	LibDir      string
+	LibraryDirs []string
+	Environment []string
+
+	PDBfn  string
+	Stdout io.Writer
+	Stderr io.Writer
+}
+
+func (b *Builder) NewBuildContext(cfg BuildConfig, srcdir, objdir, libdir string) (*BuildContext, error) {
+	if cfg == All {
+		return nil, fmt.Errorf("invalid build configuration")
+	}
+
+	cfg_flags := func(f Flags) []string {
+		r := FlagSet{}
+		r.Insert(f[All])
+		r.Insert(f[cfg])
+		flags := make([]string, 0, len(r))
+		for flag := range r {
+			flags = append(flags, flag)
 		}
-		check(toolchain.CXXCompiler, "CXX", "g++", "c++")
-		check(toolchain.Archiver, "AR", "ar", "gcc-ar")
-		check(toolchain.ASMCompiler, "AS", "as", "gcc-as")
-		check(toolchain.DLLLinker, "", "ld", "gcc-ld")
-		check(toolchain.EXELinker, "", "ld", "gcc-ld")
-		check(toolchain.OBJCopy, "", "objcopy", "gcc-objcopy")
-		check(toolchain.OBJDump, "", "objdump", "gcc-objdump")
-		check(toolchain.Runlib, "", "runlib", "gcc-runlib")
-		check(toolchain.ResourceCompiler, "", "windres", "gcc-windres")
-		check(toolchain.Strip, "", "strip", "gcc-strip")
+		sort.Strings(flags)
+		return flags
 	}
 
-	return b, nil
+	ctx := &BuildContext{
+		BuildConfig: cfg,
+		SrcDir:      srcdir,
+		ObjDir:      objdir,
+		LibDir:      libdir,
+	}
+	ctx.FlagsC = append(ctx.FlagsC, b.CCIncludeDirs...)
+	ctx.FlagsC = append(ctx.FlagsC, cfg_flags(b.FlagsC)...)
+	ctx.FlagsCXX = append(ctx.FlagsC, b.CXXIncludeDirs...)
+	ctx.FlagsCXX = append(ctx.FlagsC, cfg_flags(b.FlagsCXX)...)
+	ctx.FlagsC = cfg_flags(b.FlagsC)
+	ctx.FlagsCXX = cfg_flags(b.FlagsCXX)
+	ctx.FlagsAR = cfg_flags(b.FlagsAR)
+	ctx.FlagsDLL = cfg_flags(b.FlagsDLL)
+	ctx.FlagsEXE = cfg_flags(b.FlagsEXE)
+	ctx.FlagsRC = cfg_flags(b.FlagsRC)
+
+	ctx.LibraryDirs = b.LibraryDirs
+	ctx.Environment = b.Environment
+	if len(ctx.Environment) == 0 {
+		ctx.Environment = os.Environ()
+	}
+
+	return ctx, nil
 }
 
-func executableStem(fn string) string {
-	fn = strings.ToLower(filepath.Base(fn))
-	ext := filepath.Ext(fn)
-	if ext == ".exe" {
-		fn = strings.TrimSuffix(fn, ext)
+//func (b *Builder) ConfigPDB(ctx *BuildContext, pdb_fn string) {
+//	ctx.FlagsC = append(ctx.FlagsC, b.BindPDB(pdb_fn)...)
+//	ctx.FlagsCXX = append(ctx.FlagsCXX, b.BindCompilePDB(pdb_fn)...)
+//	ctx.FlagsDLL = append(ctx.FlagsEXE, b.BindLinkerPDB(pdb_fn)...)
+//	ctx.FlagsEXE = append(ctx.FlagsEXE, b.BindLinkerPDB(pdb_fn)...)
+//}
+
+func (b *Builder) Compile(ctx *BuildContext, src_fn, obj_fn string) error {
+	ext := strings.ToLower(filepath.Ext(src_fn))
+	var flags []string
+	exe := ""
+	switch ext {
+	case ".c":
+		flags = ctx.FlagsC
+		exe = b.Tools[toolchain.CCompiler]
+
+	case ".cxx", ".cc", ".cpp":
+		flags = ctx.FlagsCXX
+		exe = b.Tools[toolchain.CCompiler]
+
+	default:
+		return fmt.Errorf("unsupported file extension in '%s'", src_fn)
 	}
-	return fn
+
+	args := flags
+
+	cmd := exec.Command(exe, args...)
+	cmd.Dir = ctx.SrcDir
+	cmd.Env = ctx.Environment
+	cmd.Stdout = ctx.Stdout
+	cmd.Stderr = ctx.Stderr
+	err := cmd.Run()
+	return err
 }
 
-func (b *Builder) PrintSummary(w io.Writer) {
-	fmt.Fprintf(w, "compiler: %s %s\n", b.Compiler, b.Version)
-	if b.FullVersion != "" {
-		fmt.Fprintf(w, "- full version: '%s'\n", b.FullVersion)
-	}
-}
-
-func FindTool(base, infix string, tool toolchain.Tool, names ...string) string {
-
-	i, n := strings.LastIndex(base, infix), len(infix)
-	if i < 0 {
-		return ""
-	}
-
-	for _, tn := range names {
-		if t := base[:i] + tn + base[i+n:]; filesystem.FileExists(t) {
-			return t
+func (b *Builder) CompileLibrary(ctx *BuildContext, src_fns ...string) error {
+	obj_fns := []string{}
+	for _, src_fn := range src_fns {
+		obj_fn := filepath.Join(ctx.SrcDir, src_fn+b.ExtOBJ)
+		obj_fns = append(obj_fns, obj_fn)
+		err := b.Compile(ctx, src_fn, obj_fn)
+		if err != nil {
+			return err
 		}
-
 	}
-	return ""
+	for _, obj_fn := range obj_fns {
+		fmt.Printf("- %s\n", obj_fn)
+	}
+	return nil
 }
