@@ -98,7 +98,7 @@ type Builder struct {
 	Stderr  io.Writer
 }
 
-func FromChain(tc toolchain.Chain) *Builder {
+func FromChain(tc *toolchain.Chain) *Builder {
 	return &Builder{Core: Core{
 		Tools:          tc.Tools,
 		Compiler:       tc.Compiler,
