@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/adnsv/go-build/compiler/toolchain"
+	"github.com/adnsv/go-build/compiler/triplet"
 	"github.com/blang/semver"
 )
 
@@ -50,7 +51,7 @@ func QueryVersion(exe string) (*Ver, error) {
 		}
 		match = reTarget.FindStringSubmatch(output)
 		if len(match) == 2 {
-			ret.Target = strings.TrimSpace(match[1])
+			ret.Target = triplet.ParseFull(strings.TrimSpace(match[1]))
 		}
 		match = reThreadModel.FindStringSubmatch(output)
 		if len(match) == 2 {
@@ -62,7 +63,7 @@ func QueryVersion(exe string) (*Ver, error) {
 			configs, err := parseConfig(line)
 			if err == nil {
 				ret.Languages = strings.Split(configs["enable-languages"], ",")
-				ret.WithArch = configs["with-arch"]
+				//ret.WithArch = configs["with-arch"]
 			}
 		}
 	}
@@ -113,7 +114,7 @@ func Compare(c1, c2 *toolchain.Chain) int {
 	} else if e2 == nil {
 		return +1
 	}
-	if i := strings.Compare(c1.Target, c2.Target); i != 0 {
+	if i := strings.Compare(c1.Target.Original, c2.Target.Original); i != 0 {
 		return i
 	}
 	if i := strings.Compare(c1.FullVersion, c2.FullVersion); i != 0 {

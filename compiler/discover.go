@@ -9,6 +9,7 @@ import (
 	"github.com/adnsv/go-build/compiler/gcc"
 	"github.com/adnsv/go-build/compiler/msvc"
 	"github.com/adnsv/go-build/compiler/toolchain"
+	"github.com/adnsv/go-build/compiler/triplet"
 	"golang.org/x/exp/slices"
 )
 
@@ -53,74 +54,22 @@ func DiscoverToolchains(wantCxx bool, types []string, feedback func(string)) []*
 	return ret
 }
 
-func normArch(arch string) string {
-	var archNorm = map[string]string{
-		"x64":     "x64",
-		"amd64":   "x64",
-		"x86_64":  "x64",
-		"x32":     "x32",
-		"86":      "x32",
-		"x86":     "x32",
-		"386":     "x32",
-		"486":     "x32",
-		"586":     "x32",
-		"686":     "x32",
-		"i686":    "x32",
-		"arm":     "arm32",
-		"arm32":   "arm32",
-		"arm64":   "arm64",
-		"aarch64": "arm64",
-	}
-	arch = strings.ToLower(arch)
-	if norm, ok := archNorm[arch]; ok {
-		arch = norm
-	}
-	return arch
-}
-
-func normOS(os string) string {
-	os = strings.ToLower(os)
-	return os
-}
-
-func FindOsArch(os, arch string, tt []*toolchain.Chain) []*toolchain.Chain {
-	os = normOS(os)
-	arch = normArch(arch)
-
+func Find(target triplet.Target, tt []*toolchain.Chain) []*toolchain.Chain {
 	ret := []*toolchain.Chain{}
 	for _, t := range tt {
-		if t.Compiler == "MSVC" {
-			if os == "windows" && arch == normArch(t.VisualStudioArch) {
-				ret = append(ret, t)
-			}
-		} else {
-			full := strings.ToLower(t.Target)
-			parts := strings.Split(full, "-")
-			if len(parts) > 0 && arch == normArch(parts[0]) {
-				match := false
-				switch os {
-				case "linux":
-					match = strings.Contains(full, "linux-gnu") || strings.Contains(full, "linux")
-				case "windows":
-					match = strings.Contains(full, "mingw32") || strings.Contains(full, "cygwin") || strings.Contains(full, "w64") || strings.Contains(full, "w32")
-				default:
-					match = strings.Contains(full, os)
-				}
-
-				if match {
-					ret = append(ret, t)
-				}
-
-			}
+		if t.Target.Match(target) {
+			ret = append(ret, t)
 		}
 	}
 	return ret
 }
 
 func Natives(tt []*toolchain.Chain) []*toolchain.Chain {
-	os := runtime.GOOS
-	arch := runtime.GOARCH
-	return FindOsArch(os, arch, tt)
+	target := triplet.Target{
+		OS:   triplet.NormalizeOS(runtime.GOOS),
+		Arch: triplet.NormalizeArch(runtime.GOARCH),
+	}
+	return Find(target, tt)
 }
 
 func ChooseNative(tt []*toolchain.Chain, order_of_preference ...string) *toolchain.Chain {
@@ -170,7 +119,7 @@ func ChooseNative(tt []*toolchain.Chain, order_of_preference ...string) *toolcha
 		if i := strings.Compare(c1.Compiler, c2.Compiler); i != 0 {
 			return i < 0
 		}
-		if i := strings.Compare(c1.Target, c2.Target); i != 0 {
+		if i := strings.Compare(c1.Target.Original, c2.Target.Original); i != 0 {
 			return i < 0
 		}
 		return strings.Compare(c1.FullVersion, c2.FullVersion) < 0

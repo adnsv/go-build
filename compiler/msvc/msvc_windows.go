@@ -15,6 +15,7 @@ import (
 	"sync"
 
 	"github.com/adnsv/go-build/compiler/toolchain"
+	"github.com/adnsv/go-build/compiler/triplet"
 	"github.com/adnsv/go-utils/filesystem"
 )
 
@@ -223,21 +224,19 @@ func TestArches(inst *Installation, feedback func(string)) []*toolchain.Chain {
 			feedback(fmt.Sprintf("%s: architecture %s - supported", inst.DisplayName, arch))
 		}
 
-		archname := ""
-		switch arch {
-		case "amd64":
-			archname = "x64"
-		case "x86":
-			archname = "x32"
-		default:
-			archname = arch
-		}
+		tt := triplet.Full{
+			Target: triplet.Target{
+				Arch: triplet.NormalizeArch(arch),
+				OS:   "windows",
+				ABI:  "pe",
+				LibC: "msvcrt",
+			}}
 
 		tc := &toolchain.Chain{
 			Compiler:            "MSVC",
-			FullVersion:         fmt.Sprintf("%s - %s - %s", inst.DisplayName, archname, inst.InstallationVersion),
+			FullVersion:         fmt.Sprintf("%s - %s - %s", inst.DisplayName, tt.Arch, inst.InstallationVersion),
 			Version:             inst.InstallationVersion,
-			Target:              "Windows",
+			Target:              tt,
 			InstalledDir:        filepath.ToSlash(inst.InstallationPath),
 			VisualStudioID:      inst.InstanceID,
 			VisualStudioArch:    arch,

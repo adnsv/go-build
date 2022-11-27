@@ -43,7 +43,7 @@ func DiscoverInstallations(feedback func(string)) []*Installation {
 		if err != nil {
 			continue
 		}
-		sigstr := ver.FullVersion + ver.Version + ver.Target + ver.ThreadModel +
+		sigstr := ver.FullVersion + ver.Version + ver.Target.Original + ver.ThreadModel +
 			strings.Join(ver.CCIncludeDirs, "|") + "#" +
 			strings.Join(ver.CXXIncludeDirs, "|")
 
@@ -75,7 +75,7 @@ func DiscoverInstallations(feedback func(string)) []*Installation {
 		for v := range vc.symlinks {
 			inst.CCompiler.SymLinks = append(inst.CCompiler.SymLinks, v)
 		}
-		inst.CCompiler.ChoosePrimaryCCompilerPath(inst.Target, "gcc", inst.Version)
+		inst.CCompiler.ChoosePrimaryCCompilerPath(inst.Target.Original, "gcc", inst.Version)
 		ret = append(ret, inst)
 	}
 
