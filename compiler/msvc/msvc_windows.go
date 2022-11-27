@@ -267,63 +267,28 @@ func TestArches(inst *Installation, feedback func(string)) []*toolchain.Chain {
 			}
 		}
 
-		paths := filepath.SplitList(vars["PATH"])
-
-		if s := vars["CL"]; s != "" {
-			tc.Tools[toolchain.CCompiler] = filepath.ToSlash(s)
-			tc.Tools[toolchain.CXXCompiler] = filepath.ToSlash(s)
-		} else {
-			for _, path := range paths {
-				fn := filepath.Join(path, "cl.exe")
+		for _, path := range filepath.SplitList(vars["PATH"]) {
+			for name, tool := range ToolNames {
+				fn = filepath.Join(path, tool+".exe")
 				if filesystem.FileExists(fn) {
-					tc.Tools[toolchain.CCompiler] = filepath.ToSlash(fn)
-					tc.Tools[toolchain.CXXCompiler] = filepath.ToSlash(fn)
-					break
+					fn = filepath.ToSlash(fn)
+					tc.Tools[tool] = fn
+					if tool == toolchain.CXXCompiler {
+						tc.Tools[toolchain.CCompiler] = fn
+					}
 				}
 			}
 		}
 
-		if s := vars["LINK"]; s != "" {
-			tc.Tools[toolchain.DLLLinker] = filepath.ToSlash(s)
-			tc.Tools[toolchain.EXELinker] = filepath.ToSlash(s)
-		} else {
-			for _, path := range paths {
-				fn := filepath.Join(path, "link.exe")
+		for env, tool := range ToolEnvs {
+			if fn, ok = vars[env] {
 				if filesystem.FileExists(fn) {
-					tc.Tools[toolchain.DLLLinker] = filepath.ToSlash(fn)
-					tc.Tools[toolchain.EXELinker] = filepath.ToSlash(fn)
-					break
+					fn = filepath.ToSlash(fn)
+					tc.Tools[tool] = fn
+					if tool == toolchain.CXXCompiler {
+						tc.Tools[toolchain.CCompiler] = fn
+					}
 				}
-			}
-		}
-
-		ar := filepath.Join(filepath.Dir(tc.Tools[toolchain.DLLLinker]), "lib.exe")
-		if !filesystem.FileExists(ar) {
-			for _, path := range paths {
-				fn := filepath.Join(path, "lib.exe")
-				if filesystem.FileExists(fn) {
-					ar = fn
-					break
-				}
-			}
-		}
-		if ar != "" {
-			tc.Tools[toolchain.Archiver] = filepath.ToSlash(ar)
-		}
-
-		for _, path := range paths {
-			fn := filepath.Join(path, "rc.exe")
-			if filesystem.FileExists(fn) {
-				tc.Tools[toolchain.ResourceCompiler] = filepath.ToSlash(fn)
-				break
-			}
-		}
-
-		for _, path := range paths {
-			fn := filepath.Join(path, "mt.exe")
-			if filesystem.FileExists(fn) {
-				tc.Tools[toolchain.ManifestTool] = filepath.ToSlash(fn)
-				break
 			}
 		}
 
@@ -412,4 +377,17 @@ func DiscoverToolchains(feedback func(string)) []*toolchain.Chain {
 		ret = append(ret, TestArches(msvc, feedback)...)
 	}
 	return ret
+}
+
+var ToolNames = map[string]toolchain.Tool{
+	"cl":   toolchain.CXXCompiler,
+	"link": toolchain.Linker,
+	"lib":  toolchain.Archiver,
+	"rc":   toolchain.ResourceCompiler,
+	"mt":   toolchain.ManifestTool,
+}
+
+var ToolEnvs = map[string]toolchain.Tool{
+	"CL":   toolchain.CXXCompiler,
+	"LINK": toolchain.Linker,
 }

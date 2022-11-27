@@ -15,6 +15,7 @@
                 "discover-toolchains", 
                 "--format=yaml",
                 "--verbose",
+                "--type=clang",
                 "--output=testdata/toolchains.yaml"],
             "console": "integratedTerminal"
         },
@@ -30,6 +31,7 @@
                 "--format=yaml",
                 "--verbose",
                 "--installations",
+                "--type=clang",
                 "--output=testdata/installations.yaml"],
             "console": "integratedTerminal"
         },

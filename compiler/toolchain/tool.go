@@ -18,8 +18,7 @@ const (
 	ASMCompiler
 	ResourceCompiler
 	Archiver
-	DLLLinker
-	EXELinker
+	Linker
 	ManifestTool
 
 	OBJCopy
@@ -38,8 +37,7 @@ var shortToolNames = map[Tool]string{
 	ASMCompiler:      "as",
 	ResourceCompiler: "rc",
 	Archiver:         "ar",
-	DLLLinker:        "dll",
-	EXELinker:        "exe",
+	Linker:           "linker",
 	ManifestTool:     "mt",
 	OBJCopy:          "objcopy",
 	OBJDump:          "objdump",
@@ -54,8 +52,7 @@ var longToolNames = map[Tool]string{
 	ASMCompiler:      "Assembler Compiler",
 	ResourceCompiler: "Resource Compiler",
 	Archiver:         "Archiver",
-	DLLLinker:        "DLL/SO Linker",
-	EXELinker:        "Executable Linker",
+	Linker:           "Linker",
 	ManifestTool:     "Manifest Tool",
 	OBJCopy:          "objcopy",
 	OBJDump:          "objdump",
@@ -102,12 +99,14 @@ func ToolFromString(s string) (Tool, error) {
 		return Archiver, nil
 	case "lib":
 		return Archiver, nil
+	case "linker":
+		return Linker, nil
 	case "dll":
-		return DLLLinker, nil
+		return Linker, nil
 	case "so":
-		return DLLLinker, nil
+		return Linker, nil
 	case "exe":
-		return EXELinker, nil
+		return Linker, nil
 	case "mt":
 		return ManifestTool, nil
 	case "objcopy":
@@ -186,8 +185,7 @@ var orderedToolList = []Tool{
 	ASMCompiler,
 	ResourceCompiler,
 	Archiver,
-	DLLLinker,
-	EXELinker,
+	Linker,
 	ManifestTool,
 	OBJCopy,
 	OBJDump,

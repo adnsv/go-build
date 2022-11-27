@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"path/filepath"
 	"sort"
+	"strings"
 
 	"github.com/adnsv/go-build/compiler/toolchain"
 	"github.com/adnsv/go-utils/filesystem"
@@ -32,27 +33,23 @@ func DiscoverToolchains(wantCxx bool, feedback func(string)) []*toolchain.Chain 
 		}
 		tc.Tools[toolchain.CCompiler] = inst.CCompiler.PrimaryPath
 
-		checkTool := func(tool toolchain.Tool, names ...string) bool {
-			fn := inst.CCompiler.FindTool("gcc", names...)
-			if fn != "" {
-				tc.Tools[tool] = filepath.ToSlash(fn)
-				return true
+		{
+			infix := "gcc"
+			n := inst.CCompiler.PrimaryPath
+			i := strings.LastIndex(n, infix)
+			if i > 0 {
+				prefix := n[:i]
+				postfix := n[i+len(infix):]
+				tt := toolchain.FindTools(prefix, postfix, ToolNames)
+				for tool, path := range tt {
+					if _, exists := tc.Tools[tool]; !exists {
+						tc.Tools[tool] = path
+					}
+				}
 			}
-			return false
 		}
 
-		haveCxx := checkTool(toolchain.CXXCompiler, "g++", "c++")
-		checkTool(toolchain.Archiver, "ar", "gcc-ar")
-		checkTool(toolchain.ASMCompiler, "as", "gcc-as")
-		checkTool(toolchain.DLLLinker, "ld", "gcc-ld")
-		checkTool(toolchain.EXELinker, "ld", "gcc-ld")
-		checkTool(toolchain.OBJCopy, "objcopy", "gcc-objcopy")
-		checkTool(toolchain.OBJDump, "objdump", "gcc-objdump")
-		checkTool(toolchain.Ranlib, "ranlib", "gcc-ranlib")
-		checkTool(toolchain.ResourceCompiler, "windres", "gcc-windres")
-		checkTool(toolchain.Strip, "strip", "gcc-strip")
-
-		if wantCxx && !haveCxx {
+		if wantCxx && !tc.Tools.Contains(toolchain.CXXCompiler) {
 			continue
 		}
 
@@ -74,4 +71,32 @@ func DiscoverToolchains(wantCxx bool, feedback func(string)) []*toolchain.Chain 
 	}
 
 	return toolchains
+}
+
+var ToolNames = map[string]toolchain.Tool{
+	"gcc":         toolchain.CCompiler,
+	"g++":         toolchain.CXXCompiler,
+	"c++":         toolchain.CXXCompiler,
+	"cpp":         toolchain.CXXCompiler,
+	"ar":          toolchain.Archiver,
+	"as":          toolchain.ASMCompiler,
+	"ld":          toolchain.Linker,
+	"objcopy":     toolchain.OBJCopy,
+	"objdump":     toolchain.OBJDump,
+	"ranlib":      toolchain.Ranlib,
+	"windres":     toolchain.ResourceCompiler,
+	"strip":       toolchain.Strip,
+	"gcc-ar":      toolchain.Archiver,
+	"gcc-as":      toolchain.ASMCompiler,
+	"gcc-ld":      toolchain.Linker,
+	"gcc-objcopy": toolchain.OBJCopy,
+	"gcc-objdump": toolchain.OBJDump,
+	"gcc-ranlib":  toolchain.Ranlib,
+	"gcc-windres": toolchain.ResourceCompiler,
+	"gcc-strip":   toolchain.Strip,
+}
+
+var ToolEnvs = map[string]toolchain.Tool{
+	"CC":  toolchain.CCompiler,
+	"CXX": toolchain.CXXCompiler,
 }

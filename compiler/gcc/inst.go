@@ -21,7 +21,11 @@ func DiscoverInstallations(feedback func(string)) []*Installation {
 
 	files := filesystem.SearchFilesAndSymlinks(filepath.SplitList(os.Getenv("PATH")),
 		func(fi os.FileInfo) bool {
-			ss := reGCC.FindStringSubmatch(fi.Name())
+			fn := fi.Name()
+			if !strings.Contains(fn, "gcc") {
+				return false
+			}
+			ss := reGCC.FindStringSubmatch(fn)
 			if len(ss) != 2 {
 				return false
 			}
@@ -75,7 +79,7 @@ func DiscoverInstallations(feedback func(string)) []*Installation {
 		for v := range vc.symlinks {
 			inst.CCompiler.SymLinks = append(inst.CCompiler.SymLinks, v)
 		}
-		inst.CCompiler.ChoosePrimaryCCompilerPath(inst.Target.Original, "gcc", inst.Version)
+		inst.CCompiler.ChoosePrimaryCCompilerPath(inst.Target.Original, "gcc", inst.Version, ToolNames)
 		ret = append(ret, inst)
 	}
 

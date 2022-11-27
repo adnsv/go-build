@@ -2,9 +2,11 @@ package toolchain
 
 import (
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"github.com/adnsv/go-utils/filesystem"
+	"golang.org/x/exp/maps"
 )
 
 type Executable struct {
@@ -13,57 +15,106 @@ type Executable struct {
 	SymLinks    []string `json:"symlinks,omitempty"`
 }
 
-func (x *Executable) ChoosePrimaryCCompilerPath(target, cc, version string) {
-	if len(x.OtherPaths) == 0 {
-		return
+func (x *Executable) ChoosePrimaryCCompilerPath(target, cc, version string, toolnames map[string]Tool) {
+	paths := make(map[string]struct{}, len(x.OtherPaths)+len(x.SymLinks))
+	other_paths := make(map[string]struct{}, len(x.OtherPaths))
+	sym_links := make(map[string]struct{}, len(x.SymLinks))
+
+	for _, p := range x.OtherPaths {
+		fn := filepath.ToSlash(p)
+		paths[fn] = struct{}{}
+		other_paths[fn] = struct{}{}
 	}
-	if len(x.OtherPaths) == 1 {
-		x.PrimaryPath = filepath.ToSlash(x.OtherPaths[0])
-		x.OtherPaths = x.OtherPaths[:0]
+	for _, p := range x.SymLinks {
+		fn := filepath.ToSlash(p)
+		paths[fn] = struct{}{}
+		sym_links[fn] = struct{}{}
 	}
 
-	i := FindBestString(x.OtherPaths, func(fn string) int {
-		return CCompilerScore(target, cc, version, fn)
-	})
-
-	if i >= 0 {
-		x.PrimaryPath = filepath.ToSlash(x.OtherPaths[i])
-		x.OtherPaths[i] = "" // will get removed in the NormalizePathsToSlash call below
-	}
-	x.OtherPaths = filesystem.NormalizePathsToSlash(x.OtherPaths)
-}
-
-func FindBestString(ss []string, scorer func(string) int) int {
-	bestScore := 0
-	bestIndex := -1
-	for i, s := range ss {
-		score := scorer(s)
-		if bestIndex < 0 || score > bestScore {
-			bestScore = score
-			bestIndex = i
+	if len(paths) < 2 {
+		for p := range paths {
+			x.PrimaryPath = p
+			return
 		}
 	}
-	return bestIndex
+
+	s := FindBestString(paths, func(fn string) int {
+		return CCompilerScore(target, cc, version, fn, toolnames)
+	})
+
+	x.PrimaryPath = s
+	delete(other_paths, s)
+	delete(sym_links, s)
+
+	x.OtherPaths = maps.Keys(other_paths)
+	x.SymLinks = maps.Keys(sym_links)
+	sort.Strings(x.OtherPaths)
+	sort.Strings(x.SymLinks)
 }
 
-func CCompilerScore(target, cc, version, fn string) int {
+func FindBestString(m map[string]struct{}, scorer func(string) int) string {
+	bestScore := -1
+	bestString := ""
+	for s := range m {
+		score := scorer(s)
+		if score > bestScore {
+			bestScore = score
+			bestString = s
+		}
+	}
+	return bestString
+}
+
+func CollectTools(fn, infix string, toolnames map[string]Tool) Toolset {
+	dir, base := filepath.Split(fn)
+	tools := Toolset{}
+
+	if i := strings.LastIndex(base, infix); i >= 0 {
+		prefix := dir + base[:i]
+		postfix := base[i+len(infix):]
+		for t, path := range FindTools(prefix, postfix, toolnames) {
+			if !tools.Contains(t) {
+				tools[t] = path
+			}
+		}
+	}
+	if infix == "clang" {
+		infix = "llvm"
+		if i := strings.LastIndex(base, infix); i >= 0 {
+			prefix := dir + base[:i]
+			postfix := base[i+len(infix):]
+			for t, path := range FindTools(prefix, postfix, toolnames) {
+				if !tools.Contains(t) {
+					tools[t] = path
+				}
+			}
+		}
+	}
+	return tools
+}
+
+func CCompilerScore(target, cc, version, fn string, toolnames map[string]Tool) int {
 	// fn -> dir, base
-	d, b := filepath.Dir(fn), filepath.Base(fn)
+	dir, base := filepath.Split(fn)
+	score := len(fn) // prefer longer paths (slightly)
+
+	{ // # of available tools is our main metric
+		tools := CollectTools(fn, cc, toolnames)
+		score += len(tools) * 128000
+	}
 
 	// normalized name part
-	n := strings.ToLower(b)
+	n := strings.ToLower(base)
 	if filepath.Ext(n) == ".exe" {
 		n = n[:len(n)-4]
 	}
 
-	score := len(fn) // prefer longer paths
-
 	if cc == "gcc" {
 		// gcc/g++ gcc/c++ pairs
-		if strings.Contains(b, cc) {
-			if gxx := filepath.Join(d, strings.Replace(b, "gcc", "g++", 1)); filesystem.FileExists(gxx) {
+		if strings.Contains(base, cc) {
+			if gxx := filepath.Join(dir, strings.Replace(base, "gcc", "g++", 1)); filesystem.FileExists(gxx) {
 				score += 64000
-			} else if cxx := filepath.Join(d, strings.Replace(b, "gcc", "c++", 1)); filesystem.FileExists(cxx) {
+			} else if cxx := filepath.Join(dir, strings.Replace(base, "gcc", "c++", 1)); filesystem.FileExists(cxx) {
 				score += 64000
 			}
 		}
@@ -85,40 +136,24 @@ func CCompilerScore(target, cc, version, fn string) int {
 	}
 
 	// target/version in dir
-	if strings.Contains(d, target) {
+	if strings.Contains(dir, target) {
 		score += 2000
 	}
-	if strings.Contains(d, version) {
+	if strings.Contains(dir, version) {
 		score += 1000
 	}
 
 	return score
 }
 
-func (x *Executable) FindTool(cc string, names ...string) string {
-	n := len(cc)
-
-	for _, tn := range names {
-		fn := x.PrimaryPath
-		if i := strings.LastIndex(fn, cc); i >= 0 {
-			if t := fn[:i] + tn + fn[i+n:]; filesystem.FileExists(t) {
-				return t
-			}
-		}
-		for _, fn = range x.OtherPaths {
-			if i := strings.LastIndex(fn, cc); i >= 0 {
-				if t := fn[:i] + tn + fn[i+n:]; filesystem.FileExists(t) {
-					return t
-				}
-			}
-		}
-		for _, fn = range x.SymLinks {
-			if i := strings.LastIndex(fn, cc); i >= 0 {
-				if t := fn[:i] + tn + fn[i+n:]; filesystem.FileExists(t) {
-					return t
-				}
-			}
+func FindTools(path_prefix, path_postfix string, toolnames map[string]Tool) map[Tool]string {
+	ret := map[Tool]string{}
+	for name, tool := range toolnames {
+		fn := path_prefix + name + path_postfix
+		if filesystem.FileExists(fn) {
+			ret[tool] = filepath.ToSlash(fn)
+			continue
 		}
 	}
-	return ""
+	return ret
 }

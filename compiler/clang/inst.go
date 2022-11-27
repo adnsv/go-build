@@ -36,7 +36,12 @@ func DiscoverInstallations(feedback func(string)) []*Installation {
 
 	files := filesystem.SearchFilesAndSymlinks(search_paths,
 		func(fi os.FileInfo) bool {
-			return reCLANG.MatchString(fi.Name())
+			fn := fi.Name()
+			if !strings.HasPrefix(fn, "clang") {
+				return false
+			} else {
+				return reCLANG.MatchString(fi.Name())
+			}
 		})
 	if len(files) == 0 {
 		return nil
@@ -82,7 +87,7 @@ func DiscoverInstallations(feedback func(string)) []*Installation {
 			inst.CCompiler.SymLinks = append(inst.CCompiler.SymLinks, v)
 		}
 
-		inst.CCompiler.ChoosePrimaryCCompilerPath(inst.Target.Original, "clang", inst.Version)
+		inst.CCompiler.ChoosePrimaryCCompilerPath(inst.Target.Original, "clang", inst.Version, ToolNames)
 		ret = append(ret, inst)
 	}
 
