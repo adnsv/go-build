@@ -378,16 +378,3 @@ func DiscoverToolchains(feedback func(string)) []*toolchain.Chain {
 	}
 	return ret
 }
-
-var ToolNames = map[string]toolchain.Tool{
-	"cl":   toolchain.CXXCompiler,
-	"link": toolchain.Linker,
-	"lib":  toolchain.Archiver,
-	"rc":   toolchain.ResourceCompiler,
-	"mt":   toolchain.ManifestTool,
-}
-
-var ToolEnvs = map[string]toolchain.Tool{
-	"CL":   toolchain.CXXCompiler,
-	"LINK": toolchain.Linker,
-}
