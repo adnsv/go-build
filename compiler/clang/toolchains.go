@@ -98,3 +98,8 @@ var ToolNames = map[string]toolchain.Tool{
 	"llvm-windres": toolchain.ResourceCompiler,
 	"llvm-strip":   toolchain.Strip,
 }
+
+var ToolEnvs = map[string]toolchain.Tool{
+	"CC":  toolchain.CCompiler,
+	"CXX": toolchain.CXXCompiler,
+}
