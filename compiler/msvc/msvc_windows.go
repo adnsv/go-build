@@ -269,7 +269,7 @@ func TestArches(inst *Installation, feedback func(string)) []*toolchain.Chain {
 
 		for _, path := range filepath.SplitList(vars["PATH"]) {
 			for name, tool := range ToolNames {
-				fn = filepath.Join(path, tool+".exe")
+				fn := filepath.Join(path, name+".exe")
 				if filesystem.FileExists(fn) {
 					fn = filepath.ToSlash(fn)
 					tc.Tools[tool] = fn
@@ -281,7 +281,7 @@ func TestArches(inst *Installation, feedback func(string)) []*toolchain.Chain {
 		}
 
 		for env, tool := range ToolEnvs {
-			if fn, ok = vars[env] {
+			if fn, ok := vars[env]; ok {
 				if filesystem.FileExists(fn) {
 					fn = filepath.ToSlash(fn)
 					tc.Tools[tool] = fn
