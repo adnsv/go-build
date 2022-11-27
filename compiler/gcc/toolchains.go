@@ -48,7 +48,7 @@ func DiscoverToolchains(wantCxx bool, feedback func(string)) []*toolchain.Chain 
 		checkTool(toolchain.EXELinker, "ld", "gcc-ld")
 		checkTool(toolchain.OBJCopy, "objcopy", "gcc-objcopy")
 		checkTool(toolchain.OBJDump, "objdump", "gcc-objdump")
-		checkTool(toolchain.Runlib, "runlib", "gcc-runlib")
+		checkTool(toolchain.Ranlib, "ranlib", "gcc-ranlib")
 		checkTool(toolchain.ResourceCompiler, "windres", "gcc-windres")
 		checkTool(toolchain.Strip, "strip", "gcc-strip")
 

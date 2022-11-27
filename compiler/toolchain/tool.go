@@ -24,7 +24,7 @@ const (
 
 	OBJCopy
 	OBJDump
-	Runlib
+	Ranlib
 	Strip
 )
 
@@ -43,7 +43,7 @@ var shortToolNames = map[Tool]string{
 	ManifestTool:     "mt",
 	OBJCopy:          "objcopy",
 	OBJDump:          "objdump",
-	Runlib:           "runlib",
+	Ranlib:           "ranlib",
 	Strip:            "strip",
 }
 
@@ -59,7 +59,7 @@ var longToolNames = map[Tool]string{
 	ManifestTool:     "Manifest Tool",
 	OBJCopy:          "objcopy",
 	OBJDump:          "objdump",
-	Runlib:           "runlib",
+	Ranlib:           "ranlib",
 	Strip:            "strip",
 }
 
@@ -114,8 +114,8 @@ func ToolFromString(s string) (Tool, error) {
 		return OBJCopy, nil
 	case "objdump":
 		return OBJDump, nil
-	case "runlib":
-		return Runlib, nil
+	case "ranlib":
+		return Ranlib, nil
 	case "strip":
 		return Strip, nil
 	case "":
@@ -185,6 +185,6 @@ var orderedToolList = []Tool{
 	ManifestTool,
 	OBJCopy,
 	OBJDump,
-	Runlib,
+	Ranlib,
 	Strip,
 }

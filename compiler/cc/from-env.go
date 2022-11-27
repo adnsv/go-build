@@ -172,7 +172,7 @@ func FromEnv() (*Builder, error) {
 		check(toolchain.EXELinker, "", "ld", "gcc-ld")
 		check(toolchain.OBJCopy, "", "objcopy", "gcc-objcopy")
 		check(toolchain.OBJDump, "", "objdump", "gcc-objdump")
-		check(toolchain.Runlib, "", "runlib", "gcc-runlib")
+		check(toolchain.Ranlib, "", "ranlib", "gcc-ranlib")
 		check(toolchain.ResourceCompiler, "", "windres", "gcc-windres")
 		check(toolchain.Strip, "", "strip", "gcc-strip")
 	}

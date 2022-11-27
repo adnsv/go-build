@@ -46,7 +46,7 @@ func DiscoverToolchains(wantCxx bool, feedback func(string)) []*toolchain.Chain 
 		checkTool(toolchain.EXELinker, "lld")
 		checkTool(toolchain.OBJCopy, "objcopy", "llvm-objcopy")
 		checkTool(toolchain.OBJDump, "objdump", "llvm-objdump")
-		checkTool(toolchain.Runlib, "runlib", "llvm-runlib")
+		checkTool(toolchain.Ranlib, "ranlib", "llvm-ranlib")
 
 		em := map[string]string{}
 		if v := tc.Tools[toolchain.CCompiler]; v != "" {
