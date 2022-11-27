@@ -151,14 +151,20 @@ func (t *Tool) UnmarshalJSON(text []byte) (err error) {
 	return
 }
 
+// Contains checks whether the specific tool exists
+func (t Toolset) Contains(tool Tool) bool {
+	_, ok := t[tool]
+	return ok
+}
+
 // MarshalJSON provides JSON writing support for Toolset
-func (t *Toolset) MarshalJSON() (text []byte, err error) {
+func (t Toolset) MarshalJSON() (text []byte, err error) {
 	lines := []string{}
 	for _, tool := range orderedToolList {
 		if tool == UnknownTool {
 			continue
 		}
-		fn, found := (*t)[tool]
+		fn, found := t[tool]
 		if !found {
 			continue
 		}
