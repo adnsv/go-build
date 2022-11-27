@@ -12,9 +12,9 @@ type Target struct {
 }
 
 type Full struct {
-	Target
+	Target   `yaml:",inline"`
 	Original string   `json:"original,omitempty" yaml:"original,omitempty"`
-	Vendors  []string `json:"vendors,omitempty" yaml:"vendors,omitempty"`
+	Vendors  []string `json:"vendors,omitempty" yaml:"vendors,flow,omitempty"`
 }
 
 func ParseFull(target string) Full {
@@ -37,7 +37,9 @@ func ParseTarget(target string) (t Target, vendors []string) {
 	// find Arch
 	for _, s := range segments {
 		if v, ok := ParseArch(s); ok {
-			t.Arch = v
+			if t.Arch == "unknown" {
+				t.Arch = v
+			}
 			skip[s] = struct{}{}
 			break
 		}
@@ -46,27 +48,30 @@ func ParseTarget(target string) (t Target, vendors []string) {
 	// find OS
 	for _, s := range segments {
 		if v, ok := ParseOS(s); ok {
-			t.OS = v
+			if t.OS == "none" || t.OS == "unknown" {
+				t.OS = v
+			}
 			skip[s] = struct{}{}
-			break
 		}
 	}
 
 	// find ABI
 	for _, s := range segments {
 		if v, ok := ParseABI(s); ok {
-			t.ABI = v
+			if t.ABI == "unknown" {
+				t.ABI = v
+			}
 			skip[s] = struct{}{}
-			break
 		}
 	}
 
 	// find LibC
 	for _, s := range segments {
 		if v, ok := ParseLibC(s); ok {
-			t.LibC = v
+			if t.LibC == "unknown" {
+				t.LibC = v
+			}
 			skip[s] = struct{}{}
-			break
 		}
 	}
 
@@ -131,7 +136,7 @@ func ParseArch(arch string) (string, bool) {
 	}
 	arch = strings.ToLower(arch)
 	if norm, ok := archNorm[arch]; ok {
-		arch = norm
+		return norm, true
 	}
 	for _, p := range []string{
 		"aarch64", "amdgcn", "arc", "arm", "avr", "blackfin", "cr16",

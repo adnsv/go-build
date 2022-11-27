@@ -28,7 +28,7 @@ func DiscoverToolchains(wantCxx bool, feedback func(string)) []*toolchain.Chain 
 
 		if feedback != nil {
 			feedback(fmt.Sprintf("scanning gcc %s targeting %s at %s",
-				tc.Version, tc.Target, inst.CCompiler.PrimaryPath))
+				tc.Version, tc.Target.Original, inst.CCompiler.PrimaryPath))
 		}
 		tc.Tools[toolchain.CCompiler] = inst.CCompiler.PrimaryPath
 
