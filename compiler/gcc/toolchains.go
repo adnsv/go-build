@@ -16,7 +16,7 @@ func DiscoverToolchains(wantCxx bool, feedback func(string)) []*toolchain.Chain 
 
 	for _, inst := range installations {
 		tc := &toolchain.Chain{
-			Compiler:       "GCC",
+			Compiler:       "gcc",
 			Version:        inst.Version,
 			FullVersion:    inst.FullVersion,
 			Target:         inst.Target,

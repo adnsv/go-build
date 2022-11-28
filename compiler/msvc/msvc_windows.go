@@ -233,7 +233,7 @@ func TestArches(inst *Installation, feedback func(string)) []*toolchain.Chain {
 			}}
 
 		tc := &toolchain.Chain{
-			Compiler:            "MSVC",
+			Compiler:            "msvc",
 			FullVersion:         fmt.Sprintf("%s - %s - %s", inst.DisplayName, tt.Arch, inst.InstallationVersion),
 			Version:             inst.InstallationVersion,
 			Target:              tt,
