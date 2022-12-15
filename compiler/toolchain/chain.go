@@ -9,7 +9,7 @@ import (
 
 // Chain contains all the information discovered about a compiler
 type Chain struct {
-	Compiler            string       `json:"compiler" yaml:"compiler"` // MSVC/GCC/CLANG
+	Compiler            string       `json:"compiler" yaml:"compiler"` // msvc/gcc/clang
 	FullVersion         string       `json:"full-version,omitempty" yaml:"full-version,omitempty"`
 	Version             string       `json:"version,omitempty" yaml:"version,omitempty"`
 	Target              triplet.Full `json:"target,omitempty" yaml:"target,omitempty"`

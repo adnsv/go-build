@@ -25,7 +25,7 @@ type Installation struct {
 }
 
 func (i *Installation) PrintSummary(w io.Writer) {
-	fmt.Fprintf(w, "CLANG %s\n", i.Version)
+	fmt.Fprintf(w, "clang %s\n", i.Version)
 	fmt.Fprintf(w, "- full version: '%s'\n", i.FullVersion)
 	fmt.Fprintf(w, "- target: %s\n", i.Target.Original)
 	fmt.Fprintf(w, "  - os: %s\n", i.Target.OS)

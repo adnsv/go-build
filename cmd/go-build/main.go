@@ -4,7 +4,6 @@ import "github.com/alecthomas/kong"
 
 var cli struct {
 	DiscoverToolchains DiscoverToolchains `cmd:"" help:"Show available C/C++ toolchains."`
-	TestEnv            TestEnv            `cmd:"" help:"Detect C/C++ toolchain from environment variables."`
 	Version            kong.VersionFlag   `short:"v" help:"Print version information and quit."`
 }
 
