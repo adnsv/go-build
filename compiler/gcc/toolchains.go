@@ -77,7 +77,6 @@ var ToolNames = map[string]toolchain.Tool{
 	"gcc":         toolchain.CCompiler,
 	"g++":         toolchain.CXXCompiler,
 	"c++":         toolchain.CXXCompiler,
-	"cpp":         toolchain.CXXCompiler,
 	"ar":          toolchain.Archiver,
 	"as":          toolchain.ASMCompiler,
 	"ld":          toolchain.Linker,
