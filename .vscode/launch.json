@@ -15,6 +15,7 @@
                 "discover-toolchains", 
                 "--format=yaml",
                 "--verbose",
+                "--type=clang",
                 "--output=testdata/toolchains.yaml"],
             "console": "integratedTerminal"
         },
@@ -30,7 +31,26 @@
                 "--format=yaml",
                 "--verbose",
                 "--installations",
+                "--type=clang",
                 "--output=testdata/installations.yaml"],
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "test-env",
+            "type": "go",
+            "request": "launch",
+            "mode": "auto",
+            "program": "${workspaceFolder}/cmd/go-build",
+            "cwd": "${workspaceFolder}",
+            "args": [
+                "test-env", 
+                "--format=yaml",
+                //"--output=testdata/installations.yaml"
+            ],
+            //"env": {
+            //    "CC": "/usr/bin/x86_64-linux-gnu-gcc-11",
+            //    "CXX": "/usr/bin/x86_64-linux-gnu-g++-11"
+            //},
             "console": "integratedTerminal"
         }
     ]

@@ -2,12 +2,15 @@ package compiler
 
 import (
 	"io"
+	"runtime"
 	"strings"
 
 	"github.com/adnsv/go-build/compiler/clang"
 	"github.com/adnsv/go-build/compiler/gcc"
 	"github.com/adnsv/go-build/compiler/msvc"
 	"github.com/adnsv/go-build/compiler/toolchain"
+	"github.com/adnsv/go-build/compiler/triplet"
+	"golang.org/x/exp/slices"
 )
 
 type Installation interface {
@@ -51,47 +54,77 @@ func DiscoverToolchains(wantCxx bool, types []string, feedback func(string)) []*
 	return ret
 }
 
-func archNorm(arch string) string {
-	var archNorm = map[string]string{
-		"x64":     "x64",
-		"amd64":   "x64",
-		"x86_64":  "x64",
-		"x32":     "x32",
-		"86":      "x32",
-		"x86":     "x32",
-		"386":     "x32",
-		"486":     "x32",
-		"586":     "x32",
-		"686":     "x32",
-		"arm":     "arm32",
-		"arm32":   "arm32",
-		"arm64":   "arm64",
-		"aarch64": "arm64",
-	}
-	arch = strings.ToLower(arch)
-	if norm, ok := archNorm[arch]; ok {
-		arch = norm
-	}
-	return arch
-}
-
-func FindArch(arch string, tt []*toolchain.Chain) []*toolchain.Chain {
-	arch = archNorm(arch)
-
+func Find(target triplet.Target, tt []*toolchain.Chain) []*toolchain.Chain {
 	ret := []*toolchain.Chain{}
 	for _, t := range tt {
-		if t.Compiler == "MSVC" {
-			if arch == archNorm(t.VisualStudioArch) {
-				ret = append(ret, t)
-			}
-		} else {
-			pp := strings.Split(t.Target, "-")
-			if len(pp) > 0 && arch == archNorm(pp[0]) {
-				ret = append(ret, t)
-			}
+		if t.Target.Match(target) {
+			ret = append(ret, t)
 		}
 	}
 	return ret
+}
+
+func Natives(tt []*toolchain.Chain) []*toolchain.Chain {
+	target := triplet.Target{
+		OS:   triplet.NormalizeOS(runtime.GOOS),
+		Arch: triplet.NormalizeArch(runtime.GOARCH),
+	}
+	return Find(target, tt)
+}
+
+func ChooseNative(tt []*toolchain.Chain, order_of_preference ...string) *toolchain.Chain {
+	tt = Natives(tt)
+	if len(tt) <= 0 {
+		return nil
+	} else if len(tt) == 0 {
+		return tt[0]
+	}
+
+	handle_compiler := func(compiler string) *toolchain.Chain {
+		sel := []*toolchain.Chain{}
+		for _, t := range tt {
+			if t.Compiler == compiler {
+				sel = append(sel, t)
+			}
+		}
+		if len(sel) == 0 {
+			return nil
+		} else if len(sel) == 1 {
+			return sel[0]
+		}
+
+		if compiler == "msvc" {
+			slices.SortFunc(sel, func(c1, c2 *toolchain.Chain) bool {
+				return msvc.Compare(c1, c2) < 0
+			})
+		} else {
+			slices.SortFunc(sel, func(c1, c2 *toolchain.Chain) bool {
+				return gcc.Compare(c1, c2) < 0
+			})
+		}
+		return sel[len(sel)-1]
+	}
+
+	if order_of_preference == nil {
+		order_of_preference = []string{"gcc", "clang", "msvc"}
+	}
+	for _, c := range order_of_preference {
+		r := handle_compiler(c)
+		if r != nil {
+			return r
+		}
+	}
+	sel := slices.Clone(tt)
+	slices.SortFunc(sel, func(c1, c2 *toolchain.Chain) bool {
+		if i := strings.Compare(c1.Compiler, c2.Compiler); i != 0 {
+			return i < 0
+		}
+		if i := strings.Compare(c1.Target.Original, c2.Target.Original); i != 0 {
+			return i < 0
+		}
+		return strings.Compare(c1.FullVersion, c2.FullVersion) < 0
+	})
+	return sel[0]
 }
 
 func fltShow(t string, tt []string) bool {

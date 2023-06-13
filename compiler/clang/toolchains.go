@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"path/filepath"
 	"sort"
+	"strings"
 
 	"github.com/adnsv/go-build/compiler/toolchain"
 	"github.com/adnsv/go-utils/filesystem"
@@ -16,7 +17,7 @@ func DiscoverToolchains(wantCxx bool, feedback func(string)) []*toolchain.Chain 
 
 	for _, inst := range installations {
 		tc := &toolchain.Chain{
-			Compiler:       "CLANG",
+			Compiler:       "clang",
 			Version:        inst.Version,
 			FullVersion:    inst.FullVersion,
 			Target:         inst.Target,
@@ -28,25 +29,35 @@ func DiscoverToolchains(wantCxx bool, feedback func(string)) []*toolchain.Chain 
 		}
 		if feedback != nil {
 			feedback(fmt.Sprintf("scanning clang %s targeting %s at %s",
-				tc.FullVersion, tc.Target, inst.CCompiler.PrimaryPath))
+				tc.FullVersion, tc.Target.Original, inst.CCompiler.PrimaryPath))
 		}
 		tc.Tools[toolchain.CCompiler] = inst.CCompiler.PrimaryPath
-		tc.Tools[toolchain.CXXCompiler] = inst.CCompiler.PrimaryPath
-		checkTool := func(tool toolchain.Tool, names ...string) {
-			fn := inst.CCompiler.FindTool("gcc", names...)
-			if fn != "" {
-				tc.Tools[tool] = filepath.ToSlash(fn)
+
+		{
+			n := inst.CCompiler.PrimaryPath
+			infix := "clang"
+			i := strings.LastIndex(n, infix)
+			if i >= 0 {
+				prefix := n[:i]
+				postfix := n[i+len(infix):]
+				tt := toolchain.FindTools(prefix, postfix, ToolNames)
+				for tool, path := range tt {
+					if _, exists := tc.Tools[tool]; !exists {
+						tc.Tools[tool] = path
+					}
+				}
+				tt = toolchain.FindTools(prefix+"llvm", postfix, ToolNames)
+				for tool, path := range tt {
+					if _, exists := tc.Tools[tool]; !exists {
+						tc.Tools[tool] = path
+					}
+				}
 			}
 		}
 
-		checkTool(toolchain.CXXCompiler, "clang++")
-		checkTool(toolchain.Archiver, "llvm-ar", "ar")
-		checkTool(toolchain.ASMCompiler, "llvm-as", "as")
-		checkTool(toolchain.DLLLinker, "lld")
-		checkTool(toolchain.EXELinker, "lld")
-		checkTool(toolchain.OBJCopy, "objcopy", "llvm-objcopy")
-		checkTool(toolchain.OBJDump, "objdump", "llvm-objdump")
-		checkTool(toolchain.Runlib, "runlib", "llvm-runlib")
+		if !tc.Tools.Contains(toolchain.CXXCompiler) {
+			tc.Tools[toolchain.CXXCompiler] = tc.Tools[toolchain.CCompiler]
+		}
 
 		em := map[string]string{}
 		if v := tc.Tools[toolchain.CCompiler]; v != "" {
@@ -66,4 +77,29 @@ func DiscoverToolchains(wantCxx bool, feedback func(string)) []*toolchain.Chain 
 	}
 
 	return toolchains
+}
+
+var ToolNames = map[string]toolchain.Tool{
+	"clang":        toolchain.CCompiler,
+	"clang++":      toolchain.CXXCompiler,
+	"ar":           toolchain.Archiver,
+	"as":           toolchain.ASMCompiler,
+	"lld":          toolchain.Linker,
+	"objcopy":      toolchain.OBJCopy,
+	"objdump":      toolchain.OBJDump,
+	"ranlib":       toolchain.Ranlib,
+	"windres":      toolchain.ResourceCompiler,
+	"strip":        toolchain.Strip,
+	"llvm-ar":      toolchain.Archiver,
+	"llvm-as":      toolchain.ASMCompiler,
+	"llvm-objcopy": toolchain.OBJCopy,
+	"llvm-objdump": toolchain.OBJDump,
+	"llvm-ranlib":  toolchain.Ranlib,
+	"llvm-windres": toolchain.ResourceCompiler,
+	"llvm-strip":   toolchain.Strip,
+}
+
+var ToolEnvs = map[string]toolchain.Tool{
+	"CC":  toolchain.CCompiler,
+	"CXX": toolchain.CXXCompiler,
 }

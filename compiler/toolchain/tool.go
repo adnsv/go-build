@@ -18,13 +18,12 @@ const (
 	ASMCompiler
 	ResourceCompiler
 	Archiver
-	DLLLinker
-	EXELinker
+	Linker
 	ManifestTool
 
 	OBJCopy
 	OBJDump
-	Runlib
+	Ranlib
 	Strip
 )
 
@@ -38,12 +37,11 @@ var shortToolNames = map[Tool]string{
 	ASMCompiler:      "as",
 	ResourceCompiler: "rc",
 	Archiver:         "ar",
-	DLLLinker:        "dll",
-	EXELinker:        "exe",
+	Linker:           "linker",
 	ManifestTool:     "mt",
 	OBJCopy:          "objcopy",
 	OBJDump:          "objdump",
-	Runlib:           "runlib",
+	Ranlib:           "ranlib",
 	Strip:            "strip",
 }
 
@@ -54,12 +52,11 @@ var longToolNames = map[Tool]string{
 	ASMCompiler:      "Assembler Compiler",
 	ResourceCompiler: "Resource Compiler",
 	Archiver:         "Archiver",
-	DLLLinker:        "DLL/SO Linker",
-	EXELinker:        "Executable Linker",
+	Linker:           "Linker",
 	ManifestTool:     "Manifest Tool",
 	OBJCopy:          "objcopy",
 	OBJDump:          "objdump",
-	Runlib:           "runlib",
+	Ranlib:           "ranlib",
 	Strip:            "strip",
 }
 
@@ -102,20 +99,22 @@ func ToolFromString(s string) (Tool, error) {
 		return Archiver, nil
 	case "lib":
 		return Archiver, nil
+	case "linker":
+		return Linker, nil
 	case "dll":
-		return DLLLinker, nil
+		return Linker, nil
 	case "so":
-		return DLLLinker, nil
+		return Linker, nil
 	case "exe":
-		return EXELinker, nil
+		return Linker, nil
 	case "mt":
 		return ManifestTool, nil
 	case "objcopy":
 		return OBJCopy, nil
 	case "objdump":
 		return OBJDump, nil
-	case "runlib":
-		return Runlib, nil
+	case "ranlib":
+		return Ranlib, nil
 	case "strip":
 		return Strip, nil
 	case "":
@@ -151,14 +150,20 @@ func (t *Tool) UnmarshalJSON(text []byte) (err error) {
 	return
 }
 
+// Contains checks whether the specific tool exists
+func (t Toolset) Contains(tool Tool) bool {
+	_, ok := t[tool]
+	return ok
+}
+
 // MarshalJSON provides JSON writing support for Toolset
-func (t *Toolset) MarshalJSON() (text []byte, err error) {
+func (t Toolset) MarshalJSON() (text []byte, err error) {
 	lines := []string{}
 	for _, tool := range orderedToolList {
 		if tool == UnknownTool {
 			continue
 		}
-		fn, found := (*t)[tool]
+		fn, found := t[tool]
 		if !found {
 			continue
 		}
@@ -180,11 +185,10 @@ var orderedToolList = []Tool{
 	ASMCompiler,
 	ResourceCompiler,
 	Archiver,
-	DLLLinker,
-	EXELinker,
+	Linker,
 	ManifestTool,
 	OBJCopy,
 	OBJDump,
-	Runlib,
+	Ranlib,
 	Strip,
 }

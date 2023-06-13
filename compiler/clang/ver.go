@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/adnsv/go-build/compiler/gcc"
+	"github.com/adnsv/go-build/compiler/triplet"
 )
 
 var reVersion = regexp.MustCompile(`^(?:Apple LLVM|.*clang) version ([\S]*).*`)
@@ -51,7 +52,7 @@ func QueryVersion(exe string) (*Ver, error) {
 		}
 		match = reTarget.FindStringSubmatch(output)
 		if len(match) == 2 {
-			ret.Target = strings.TrimSpace(match[1])
+			ret.Target = triplet.ParseFull(strings.TrimSpace(match[1]))
 		}
 		match = reThreadModel.FindStringSubmatch(output)
 		if len(match) == 2 {
