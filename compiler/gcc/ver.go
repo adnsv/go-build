@@ -108,7 +108,9 @@ func Compare(c1, c2 *toolchain.Chain) int {
 	v1, e1 := semver.ParseTolerant(c1.Version)
 	v2, e2 := semver.ParseTolerant(c2.Version)
 	if e1 == nil && e2 == nil {
-		v1.Compare(v2)
+		if i := v1.Compare(v2); i != 0 {
+			return i
+		}
 	} else if e1 == nil {
 		return -1
 	} else if e2 == nil {
