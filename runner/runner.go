@@ -57,7 +57,7 @@ func (ar *AR) Make(aout string, objs []string) error {
 }
 
 type LD struct {
-	Runner
+	runner
 	Flags []string
 }
 
@@ -73,7 +73,7 @@ func (ld *LD) Make(exe string, subsystem string, libs []string) error {
 }
 
 type RC struct {
-	Runner
+	runner
 	Flags []string
 }
 
@@ -83,7 +83,7 @@ func (rc *RC) Make(resout string, rcin string) error {
 }
 
 type MT struct {
-	Runner
+	runner
 	Flags []string
 }
 

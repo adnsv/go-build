@@ -94,12 +94,12 @@ func ChooseNative(tt []*toolchain.Chain, order_of_preference ...string) *toolcha
 		}
 
 		if compiler == "msvc" {
-			slices.SortFunc(sel, func(c1, c2 *toolchain.Chain) bool {
-				return msvc.Compare(c1, c2) < 0
+			slices.SortFunc(sel, func(c1, c2 *toolchain.Chain) int {
+				return msvc.Compare(c1, c2)
 			})
 		} else {
-			slices.SortFunc(sel, func(c1, c2 *toolchain.Chain) bool {
-				return gcc.Compare(c1, c2) < 0
+			slices.SortFunc(sel, func(c1, c2 *toolchain.Chain) int {
+				return gcc.Compare(c1, c2)
 			})
 		}
 		return sel[len(sel)-1]
@@ -115,14 +115,14 @@ func ChooseNative(tt []*toolchain.Chain, order_of_preference ...string) *toolcha
 		}
 	}
 	sel := slices.Clone(tt)
-	slices.SortFunc(sel, func(c1, c2 *toolchain.Chain) bool {
+	slices.SortFunc(sel, func(c1, c2 *toolchain.Chain) int {
 		if i := strings.Compare(c1.Compiler, c2.Compiler); i != 0 {
-			return i < 0
+			return i
 		}
 		if i := strings.Compare(c1.Target.Original, c2.Target.Original); i != 0 {
-			return i < 0
+			return i
 		}
-		return strings.Compare(c1.FullVersion, c2.FullVersion) < 0
+		return strings.Compare(c1.FullVersion, c2.FullVersion)
 	})
 	return sel[0]
 }
