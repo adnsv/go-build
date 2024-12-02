@@ -3,14 +3,14 @@ package gcc
 import (
 	"errors"
 	"fmt"
+	"os"
 	"os/exec"
 	"regexp"
-	"runtime"
 	"strings"
 
 	"github.com/adnsv/go-build/compiler/toolchain"
 	"github.com/adnsv/go-build/compiler/triplet"
-	"github.com/blang/semver"
+	"github.com/blang/semver/v4"
 )
 
 var reVersion = regexp.MustCompile("gcc version (.*?) .*")
@@ -18,6 +18,36 @@ var reTarget = regexp.MustCompile(`Target:\s+(.*)`)
 var reThreadModel = regexp.MustCompile(`Thread model:\s+(.*)`)
 
 func QueryVersion(exe string) (*Ver, error) {
+	// First try to get version from predefined macros
+	version, err := getVersionFromMacros(exe)
+	if err != nil {
+		// Fallback to parsing -v output
+		cmd := exec.Command(exe, "-v")
+		buf, err := cmd.CombinedOutput()
+		if err != nil {
+			return nil, err
+		}
+		output := string(buf)
+		lines := strings.Split(output, "\n")
+		for len(lines) > 0 && lines[len(lines)-1] == "" {
+			lines = lines[:len(lines)-1]
+		}
+		if len(lines) == 0 {
+			return nil, errors.New("invalid version output")
+		}
+
+		match := reVersion.FindStringSubmatch(strings.TrimSpace(lines[len(lines)-1]))
+		if len(match) != 2 {
+			return nil, errors.New("invalid version output")
+		}
+		version = strings.TrimSpace(match[1])
+	}
+
+	ret := &Ver{
+		Version: version,
+	}
+
+	// Get additional information from -v output
 	cmd := exec.Command(exe, "-v")
 	buf, err := cmd.CombinedOutput()
 	if err != nil {
@@ -25,22 +55,7 @@ func QueryVersion(exe string) (*Ver, error) {
 	}
 	output := string(buf)
 	lines := strings.Split(output, "\n")
-	for len(lines) > 0 && lines[len(lines)-1] == "" {
-		lines = lines[:len(lines)-1]
-	}
-	if len(lines) == 0 {
-		return nil, errors.New("invalid version output")
-	}
 
-	match := reVersion.FindStringSubmatch(strings.TrimSpace(lines[len(lines)-1]))
-	if len(match) != 2 {
-		return nil, errors.New("invalid version output")
-	}
-
-	ret := &Ver{
-		FullVersion: strings.TrimSpace(match[0]),
-		Version:     strings.TrimSpace(match[1]),
-	}
 	for _, line := range lines {
 		n := len(line)
 		if n == 0 {
@@ -49,11 +64,12 @@ func QueryVersion(exe string) (*Ver, error) {
 		if line[n-1] == '\r' {
 			line = line[:n-1]
 		}
-		match = reTarget.FindStringSubmatch(output)
+		match := reTarget.FindStringSubmatch(output)
 		if len(match) == 2 {
-			target, err := triplet.ParseFull(strings.TrimSpace(match[1]))
-			if err == nil {
-				ret.Target = target
+			var err error
+			ret.Target, err = triplet.ParseFull(strings.TrimSpace(match[1]))
+			if err != nil {
+				ret.Target = triplet.Full{Original: strings.TrimSpace(match[1])}
 			}
 		}
 		match = reThreadModel.FindStringSubmatch(output)
@@ -66,54 +82,99 @@ func QueryVersion(exe string) (*Ver, error) {
 			configs, err := parseConfig(line)
 			if err == nil {
 				ret.Languages = strings.Split(configs["enable-languages"], ",")
-				//ret.WithArch = configs["with-arch"]
 			}
 		}
 	}
-	ret.CCIncludeDirs = append(ret.CCIncludeDirs, ExtractIncludePaths(exe, "c")...)
-	ret.CXXIncludeDirs = append(ret.CXXIncludeDirs, ExtractIncludePaths(exe, "c++")...)
+
+	// Get include paths with proper locale handling
+	if ccIncludes, err := GetSystemIncludes(exe, "c"); err == nil {
+		ret.CCIncludeDirs = ccIncludes
+	}
+	if cxxIncludes, err := GetSystemIncludes(exe, "c++"); err == nil {
+		ret.CXXIncludeDirs = cxxIncludes
+	}
+
 	return ret, nil
 }
 
-func ExtractIncludePaths(exe string, lang string) []string {
-	cmd := exec.Command(exe, "-x"+lang, "-E", "-v", "-")
-	buf, err := cmd.CombinedOutput()
+func getVersionFromMacros(exe string) (string, error) {
+	cmd := exec.Command(exe, "-dM", "-E", "-")
+	cmd.Stdin = strings.NewReader("")
+	out, err := cmd.Output()
 	if err != nil {
-		return nil
-	}
-	lines := strings.Split(string(buf), "\n")
-	ret := []string{}
-	includeLine := false
-
-	fixpath := func(s string) string { return s }
-	if runtime.GOOS != "windows" && strings.HasPrefix(exe, "/mnt/") {
-		fixpath = fixWSLpath
+		return "", err
 	}
 
-	for _, line := range lines {
-		line = strings.TrimRight(line, "\r")
-		if includeLine {
-			if line == "End of search list." {
-				includeLine = false
-				continue
-			}
-			line = strings.TrimSpace(line)
-			line = fixpath(line)
-			ret = append(ret, line)
-		} else if line == "#include <...> search starts here:" {
-			includeLine = true
+	var major, minor, patch string
+	for _, line := range strings.Split(string(out), "\n") {
+		switch {
+		case strings.Contains(line, "__GNUC__"):
+			major = strings.Fields(line)[2]
+		case strings.Contains(line, "__GNUC_MINOR__"):
+			minor = strings.Fields(line)[2]
+		case strings.Contains(line, "__GNUC_PATCHLEVEL__"):
+			patch = strings.Fields(line)[2]
 		}
 	}
-	return ret
+
+	if major == "" {
+		return "", errors.New("could not determine GCC version from macros")
+	}
+
+	if minor == "" {
+		minor = "0"
+	}
+	if patch == "" {
+		patch = "0"
+	}
+
+	return fmt.Sprintf("%s.%s.%s", major, minor, patch), nil
+}
+
+func GetSystemIncludes(exe, lang string) ([]string, error) {
+	// Save current locale
+	origLang := os.Getenv("LANG")
+	origLCAll := os.Getenv("LC_ALL")
+	os.Setenv("LANG", "C")
+	os.Setenv("LC_ALL", "C")
+	defer func() {
+		os.Setenv("LANG", origLang)
+		os.Setenv("LC_ALL", origLCAll)
+	}()
+
+	cmd := exec.Command(exe, "-x"+lang, "-E", "-v", "-")
+	cmd.Stdin = strings.NewReader("")
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		return nil, err
+	}
+
+	var includes []string
+	collecting := false
+	for _, line := range strings.Split(string(out), "\n") {
+		if strings.Contains(line, "#include <...> search starts here:") {
+			collecting = true
+			continue
+		}
+		if strings.Contains(line, "End of search list.") {
+			break
+		}
+		if collecting {
+			path := strings.TrimSpace(line)
+			if path != "" {
+				path = fixWSLPath(path)
+				includes = append(includes, path)
+			}
+		}
+	}
+	return includes, nil
 }
 
 func Compare(c1, c2 *toolchain.Chain) int {
 	v1, e1 := semver.ParseTolerant(c1.Version)
 	v2, e2 := semver.ParseTolerant(c2.Version)
 	if e1 == nil && e2 == nil {
-		if i := v1.Compare(v2); i != 0 {
-			return i
-		}
+		v1.Compare(v2)
 	} else if e1 == nil {
 		return -1
 	} else if e2 == nil {
@@ -125,19 +186,7 @@ func Compare(c1, c2 *toolchain.Chain) int {
 	if i := strings.Compare(c1.FullVersion, c2.FullVersion); i != 0 {
 		return i
 	}
-	return strings.Compare(c1.Tools[toolchain.CXXCompiler], c2.Tools[toolchain.CXXCompiler])
-}
-
-func fixWSLpath(p string) string {
-	if len(p) < 3 {
-		return p
-	}
-	if p[1] == ':' && (p[2] == '\\' || p[2] == '/') {
-		ret := "/mnt/" + strings.ToLower(p[:1]) + "/" + strings.ReplaceAll(p[3:], "\\", "/")
-		return ret
-	} else {
-		return p
-	}
+	return strings.Compare(string(c1.Tools[toolchain.CXXCompiler]), string(c2.Tools[toolchain.CXXCompiler]))
 }
 
 func parseConfig(s string) (map[string]string, error) {

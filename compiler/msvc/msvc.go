@@ -11,15 +11,33 @@ import (
 	"github.com/adnsv/go-build/compiler/toolchain"
 )
 
-// Installation corresponds to an instance of VisualStudio
+// ArchitectureSpec represents a supported MSVC architecture configuration
+type ArchitectureSpec struct {
+	Name          string // Combined name (e.g., "amd64" or "amd64_x86")
+	HostArch      string // Host architecture
+	TargetArch    string // Target architecture
+	CrossCompiler bool   // Whether this is a cross-compilation setup
+}
+
+// ToolsetVersion represents a specific MSVC toolset version
+type ToolsetVersion struct {
+	Version     string // Version string (e.g., "14.29.30133")
+	Path        string // Path to the toolset
+	IsDefault   bool   // Whether this is the default toolset
+	SDKVersion  string // Windows SDK version compatible with this toolset
+	UCRTVersion string // Universal CRT version
+}
+
+// Installation corresponds to an instance of Visual Studio
 type Installation struct {
-	DisplayName         string `json:"display-name" yaml:"display-name"`
-	InstanceID          string `json:"instance-id" yaml:"instance-id"`
-	InstallationPath    string `json:"installation-path" yaml:"installation-path"`
-	InstallationVersion string `json:"installation-version" yaml:"installation-version"`
-	Description         string `json:"description" yaml:"description"`
-	IsPrerelease        bool   `json:"is-prerelease" yaml:"is-prerelease"`
-	ToolsetVersion      string `json:"toolset-version" yaml:"toolset-version"`
+	DisplayName         string           `json:"display-name" yaml:"display-name"`
+	InstanceID          string           `json:"instance-id" yaml:"instance-id"`
+	InstallationPath    string           `json:"installation-path" yaml:"installation-path"`
+	InstallationVersion string           `json:"installation-version" yaml:"installation-version"`
+	Description         string           `json:"description" yaml:"description"`
+	IsPrerelease        bool             `json:"is-prerelease" yaml:"is-prerelease"`
+	ToolsetVersions     []ToolsetVersion `json:"toolset-versions" yaml:"toolset-versions"`
+	DiscoveryMethod     string           `json:"discovery-method" yaml:"discovery-method"` // "vswhere", "env", "standalone"
 }
 
 func (i *Installation) PrintSummary(w io.Writer) {
@@ -27,12 +45,55 @@ func (i *Installation) PrintSummary(w io.Writer) {
 	fmt.Fprintf(w, "- version: '%s'\n", i.InstallationVersion)
 	fmt.Fprintf(w, "- instance id: '%s'\n", i.InstanceID)
 	fmt.Fprintf(w, "- path: '%s'\n", i.InstallationPath)
-	if i.ToolsetVersion != "" {
-		fmt.Fprintf(w, "- toolset: '%s'\n", i.ToolsetVersion)
+	fmt.Fprintf(w, "- discovery method: '%s'\n", i.DiscoveryMethod)
+	if len(i.ToolsetVersions) > 0 {
+		fmt.Fprintf(w, "- toolsets:\n")
+		for _, ts := range i.ToolsetVersions {
+			fmt.Fprintf(w, "  - version: '%s'%s\n", ts.Version, map[bool]string{true: " (default)", false: ""}[ts.IsDefault])
+			if ts.SDKVersion != "" {
+				fmt.Fprintf(w, "    sdk: '%s'\n", ts.SDKVersion)
+			}
+			if ts.UCRTVersion != "" {
+				fmt.Fprintf(w, "    ucrt: '%s'\n", ts.UCRTVersion)
+			}
+		}
 	}
 	if i.IsPrerelease {
-		fmt.Fprintf(w, "- this is a pre-release build")
+		fmt.Fprintf(w, "- this is a pre-release build\n")
 	}
+}
+
+// Extended environment variables used for MSVC detection
+var msvcEnvVarsExtended = []string{
+	"VS140COMNTOOLS", // VS 2015
+	"VS120COMNTOOLS", // VS 2013
+	"VS110COMNTOOLS", // VS 2012
+	"VSINSTALLDIR",
+	"VS_INSTALLDIR",
+	"VS_PLATFORMTOOLSET",
+	"CL",
+	"_CL_",
+	"INCLUDE",
+	"LIBPATH",
+	"LINK",
+	"_LINK_",
+	"LIB",
+	"PATH",
+	"TMP",
+	"FRAMEWORKDIR",
+	"FRAMEWORKDIR64",
+	"FRAMEWORKVERSION",
+	"FRAMEWORKVERSION64",
+	"UCRTCONTEXTROOT",
+	"UCRTVERSION",
+	"UNIVERSALCRTSDKDIR",
+	"VCINSTALLDIR",
+	"VCTARGETSPATH",
+	"WINDOWSLIBPATH",
+	"WINDOWSSDKDIR",
+	"WINDOWSSDKLIBVERSION",
+	"WINDOWSSDKVERSION",
+	"VISUALSTUDIOVERSION",
 }
 
 var reVersion = regexp.MustCompile("^Microsoft .*Version (.*) for (.*)")

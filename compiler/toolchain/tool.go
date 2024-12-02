@@ -27,8 +27,46 @@ const (
 	Strip
 )
 
-// Toolset is a collection of tools with filepaths to their executables
-type Toolset map[Tool]string
+// ToolPath represents a path to a tool executable with optional subcommands
+// Format: path|cmd1|cmd2|... (pipe separator to avoid conflicts with Windows drive letters)
+type ToolPath string
+
+// NewToolPath creates a ToolPath from a path and optional subcommands
+func NewToolPath(path string, commands ...string) ToolPath {
+	if len(commands) == 0 {
+		return ToolPath(path)
+	}
+	return ToolPath(path + "|" + strings.Join(commands, "|"))
+}
+
+// Path returns the executable path part (before any pipe)
+func (tp ToolPath) Path() string {
+	if i := strings.IndexByte(string(tp), '|'); i >= 0 {
+		return string(tp[:i])
+	}
+	return string(tp)
+}
+
+// Commands returns the optional subcommands (after pipes) as a slice
+func (tp ToolPath) Commands() []string {
+	if i := strings.IndexByte(string(tp), '|'); i >= 0 {
+		return strings.Split(string(tp[i+1:]), "|")
+	}
+	return nil
+}
+
+// HasCommands returns true if the tool path includes subcommands
+func (tp ToolPath) HasCommands() bool {
+	return strings.IndexByte(string(tp), '|') >= 0
+}
+
+// String returns the full tool path including subcommands
+func (tp ToolPath) String() string {
+	return string(tp)
+}
+
+// Toolset is a collection of tools with their paths and optional subcommands
+type Toolset map[Tool]ToolPath
 
 var shortToolNames = map[Tool]string{
 	UnknownTool:      "UNKNOWN_TOOL",

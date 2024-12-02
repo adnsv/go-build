@@ -1,4 +1,4 @@
-package compiler
+package discover
 
 import (
 	"io"
@@ -17,7 +17,7 @@ type Installation interface {
 	PrintSummary(w io.Writer)
 }
 
-func DiscoverInstallations(types []string, feedback func(string)) []Installation {
+func Installations(types []string, feedback func(string)) []Installation {
 	ret := []Installation{}
 	if fltShow("msvc", types) {
 		ii, _ := msvc.DiscoverInstallations(feedback)
@@ -40,16 +40,17 @@ func DiscoverInstallations(types []string, feedback func(string)) []Installation
 	return ret
 }
 
-func DiscoverToolchains(wantCxx bool, types []string, feedback func(string)) []*toolchain.Chain {
+// Toolchains returns all available toolchains
+func Toolchains(types []string, feedback func(string)) []*toolchain.Chain {
 	ret := []*toolchain.Chain{}
 	if fltShow("msvc", types) {
 		ret = append(ret, msvc.DiscoverToolchains(feedback)...)
 	}
 	if fltShow("gcc", types) || fltShow("gnu", types) {
-		ret = append(ret, gcc.DiscoverToolchains(wantCxx, feedback)...)
+		ret = append(ret, gcc.DiscoverToolchains(feedback)...)
 	}
 	if fltShow("clang", types) || fltShow("llvm", types) {
-		ret = append(ret, clang.DiscoverToolchains(wantCxx, feedback)...)
+		ret = append(ret, clang.DiscoverToolchains(feedback)...)
 	}
 	return ret
 }
@@ -94,13 +95,9 @@ func ChooseNative(tt []*toolchain.Chain, order_of_preference ...string) *toolcha
 		}
 
 		if compiler == "msvc" {
-			slices.SortFunc(sel, func(c1, c2 *toolchain.Chain) int {
-				return msvc.Compare(c1, c2)
-			})
+			slices.SortFunc(sel, msvc.Compare)
 		} else {
-			slices.SortFunc(sel, func(c1, c2 *toolchain.Chain) int {
-				return gcc.Compare(c1, c2)
-			})
+			slices.SortFunc(sel, gcc.Compare)
 		}
 		return sel[len(sel)-1]
 	}

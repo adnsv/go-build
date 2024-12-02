@@ -7,7 +7,7 @@ import (
 	"log"
 	"os"
 
-	"github.com/adnsv/go-build/compiler"
+	"github.com/adnsv/go-build/compiler/discover"
 	"github.com/alecthomas/kong"
 	"gopkg.in/yaml.v3"
 )
@@ -31,7 +31,7 @@ func (cmd *DiscoverToolchains) Run(ctx *kong.Context) error {
 		}
 	}
 	if cmd.Installations {
-		ii := compiler.DiscoverInstallations(cmd.Type, feedback)
+		ii := discover.Installations(cmd.Type, feedback)
 		switch cmd.Format {
 		case "json":
 			buf, err = json.MarshalIndent(ii, "", "  ")
@@ -56,9 +56,9 @@ func (cmd *DiscoverToolchains) Run(ctx *kong.Context) error {
 			return err
 		}
 	} else {
-		tt := compiler.DiscoverToolchains(true, cmd.Type, feedback)
+		tt := discover.Toolchains(cmd.Type, feedback)
 		if cmd.Native {
-			tt = compiler.Natives(tt)
+			tt = discover.Natives(tt)
 		}
 		switch cmd.Format {
 		case "json":

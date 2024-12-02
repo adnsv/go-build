@@ -11,11 +11,12 @@ import (
 
 type Executable struct {
 	PrimaryPath string   `json:"primary-path"`
+	Subcommands []string `json:"subcommands,omitempty"` // optional subcommands for the primary path (Zig cc)
 	OtherPaths  []string `json:"alternative-paths,omitempty"`
 	SymLinks    []string `json:"symlinks,omitempty"`
 }
 
-func (x *Executable) ChoosePrimaryCCompilerPath(target, cc, version string, toolnames map[string]Tool) {
+func (x *Executable) ChoosePrimaryCCompilerPath(target string, cc string, version string, toolnames map[string]Tool) {
 	paths := make(map[string]struct{}, len(x.OtherPaths)+len(x.SymLinks))
 	other_paths := make(map[string]struct{}, len(x.OtherPaths))
 	sym_links := make(map[string]struct{}, len(x.SymLinks))
@@ -34,6 +35,8 @@ func (x *Executable) ChoosePrimaryCCompilerPath(target, cc, version string, tool
 	if len(paths) < 2 {
 		for p := range paths {
 			x.PrimaryPath = p
+			x.OtherPaths = nil
+			x.SymLinks = nil
 			return
 		}
 	}
@@ -146,12 +149,12 @@ func CCompilerScore(target, cc, version, fn string, toolnames map[string]Tool) i
 	return score
 }
 
-func FindTools(path_prefix, path_postfix string, toolnames map[string]Tool) map[Tool]string {
-	ret := map[Tool]string{}
+func FindTools(path_prefix, path_postfix string, toolnames map[string]Tool) Toolset {
+	ret := Toolset{}
 	for name, tool := range toolnames {
 		fn := path_prefix + name + path_postfix
 		if filesystem.FileExists(fn) {
-			ret[tool] = filepath.ToSlash(fn)
+			ret[tool] = ToolPath(filepath.ToSlash(fn))
 			continue
 		}
 	}

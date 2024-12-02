@@ -10,7 +10,7 @@ import (
 	"github.com/adnsv/go-utils/filesystem"
 )
 
-func DiscoverToolchains(wantCxx bool, feedback func(string)) []*toolchain.Chain {
+func DiscoverToolchains(feedback func(string)) []*toolchain.Chain {
 
 	installations := DiscoverInstallations(feedback)
 	toolchains := []*toolchain.Chain{}
@@ -18,6 +18,7 @@ func DiscoverToolchains(wantCxx bool, feedback func(string)) []*toolchain.Chain 
 	for _, inst := range installations {
 		tc := &toolchain.Chain{
 			Compiler:       "clang",
+			Implementation: string(inst.Implementation),
 			Version:        inst.Version,
 			FullVersion:    inst.FullVersion,
 			Target:         inst.Target,
@@ -25,15 +26,32 @@ func DiscoverToolchains(wantCxx bool, feedback func(string)) []*toolchain.Chain 
 			InstalledDir:   filepath.ToSlash(inst.InstalledDir),
 			CCIncludeDirs:  inst.CCIncludeDirs,
 			CXXIncludeDirs: inst.CXXIncludeDirs,
-			Tools:          map[toolchain.Tool]string{},
+			Tools:          map[toolchain.Tool]toolchain.ToolPath{},
 		}
 		if feedback != nil {
-			feedback(fmt.Sprintf("scanning clang %s targeting %s at %s",
+			feedback(fmt.Sprintf("scanning %s %s targeting %s at %s",
+				inst.Implementation,
 				tc.FullVersion, tc.Target.Original, inst.CCompiler.PrimaryPath))
 		}
-		tc.Tools[toolchain.CCompiler] = inst.CCompiler.PrimaryPath
+		tc.Tools[toolchain.CCompiler] = toolchain.ToolPath(inst.CCompiler.PrimaryPath)
 
-		{
+		if inst.Implementation == ZigClang {
+			tc.Tools[toolchain.CCompiler] = toolchain.NewToolPath(inst.CCompiler.PrimaryPath, "cc")
+			tc.Tools[toolchain.CXXCompiler] = toolchain.NewToolPath(inst.CCompiler.PrimaryPath, "c++")
+
+			tc.Tools[toolchain.Archiver] = toolchain.NewToolPath(inst.CCompiler.PrimaryPath, "ar")
+			tc.Tools[toolchain.ResourceCompiler] = toolchain.NewToolPath(inst.CCompiler.PrimaryPath, "rc")
+
+			tc.Tools[toolchain.Ranlib] = toolchain.NewToolPath(inst.CCompiler.PrimaryPath, "ranlib")
+			tc.Tools[toolchain.OBJCopy] = toolchain.NewToolPath(inst.CCompiler.PrimaryPath, "objcopy")
+			tc.Tools[toolchain.OBJDump] = toolchain.NewToolPath(inst.CCompiler.PrimaryPath, "objdump")
+
+			// as of time of this writing, linker is not yet available in zig-clang
+			// tc.Tools[toolchain.Linker] = toolchain.NewToolPath(inst.CCompiler.PrimaryPath, "ld")
+			// tc.Tools[toolchain.ASMCompiler] = toolchain.NewToolPath(inst.CCompiler.PrimaryPath, "as")
+			// tc.Tools[toolchain.Strip] = toolchain.NewToolPath(inst.CCompiler.PrimaryPath, "strip")
+			// it is unclear what zig lib does at this time and how it is to be used
+		} else {
 			n := inst.CCompiler.PrimaryPath
 			infix := "clang"
 			i := strings.LastIndex(n, infix)
@@ -61,10 +79,10 @@ func DiscoverToolchains(wantCxx bool, feedback func(string)) []*toolchain.Chain 
 
 		em := map[string]string{}
 		if v := tc.Tools[toolchain.CCompiler]; v != "" {
-			em["CC"] = v
+			em["CC"] = v.Path()
 		}
 		if v := tc.Tools[toolchain.CXXCompiler]; v != "" {
-			em["CXX"] = v
+			em["CXX"] = v.Path()
 		}
 		em["C_INCLUDE_PATH"] = filesystem.JoinPathList(tc.CCIncludeDirs...)
 		em["CPLUS_INCLUDE_PATH"] = filesystem.JoinPathList(tc.CXXIncludeDirs...)

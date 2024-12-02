@@ -9,7 +9,8 @@ import (
 
 // Chain contains all the information discovered about a compiler
 type Chain struct {
-	Compiler            string       `json:"compiler" yaml:"compiler"` // msvc/gcc/clang
+	Compiler            string       `json:"compiler" yaml:"compiler"`                                 // msvc|gcc|clang
+	Implementation      string       `json:"implementation,omitempty" yaml:"implementation,omitempty"` // msvc|gcc|clang|apple-clang|emscripten|...
 	FullVersion         string       `json:"full-version,omitempty" yaml:"full-version,omitempty"`
 	Version             string       `json:"version,omitempty" yaml:"version,omitempty"`
 	Target              triplet.Full `json:"target,omitempty" yaml:"target,omitempty"`
@@ -41,8 +42,7 @@ func (tc *Chain) PrintSummary(w io.Writer) {
 	fmt.Fprintf(w, "  - arch: %s\n", tc.Target.Arch)
 	fmt.Fprintf(w, "  - abi: %s\n", tc.Target.ABI)
 	fmt.Fprintf(w, "  - libc: %s\n", tc.Target.LibC)
-	cc := tc.Tools[CCompiler]
-	cxx := tc.Tools[CXXCompiler]
+	cc, cxx := tc.GetCompilerPaths()
 	if cc == cxx {
 		fmt.Fprintf(w, "  - C/C++ path: '%s'\n", cc)
 	} else {
@@ -53,4 +53,14 @@ func (tc *Chain) PrintSummary(w io.Writer) {
 			fmt.Fprintf(w, "  - C++ path: '%s'\n", cxx)
 		}
 	}
+}
+
+func (tc *Chain) GetCompilerPaths() (cc, cxx string) {
+	if v := tc.Tools[CCompiler]; v != "" {
+		cc = v.Path()
+	}
+	if v := tc.Tools[CXXCompiler]; v != "" {
+		cxx = v.Path()
+	}
+	return
 }

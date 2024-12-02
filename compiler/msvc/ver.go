@@ -24,28 +24,13 @@ func ParseVersionQuad(s string) (v VersionQuad, err error) {
 
 func (v VersionQuad) Compare(o VersionQuad) int {
 	if v.Major != o.Major {
-		if v.Major > o.Major {
-			return 1
-		}
-		return -1
+		return v.Major - o.Major
 	}
 	if v.Minor != o.Minor {
-		if v.Minor > o.Minor {
-			return 1
-		}
-		return -1
+		return v.Minor - o.Minor
 	}
 	if v.Patch != o.Patch {
-		if v.Patch > o.Patch {
-			return 1
-		}
-		return -1
+		return v.Patch - o.Patch
 	}
-	if v.Build != o.Build {
-		if v.Build > o.Build {
-			return 1
-		}
-		return -1
-	}
-	return 0
+	return v.Build - o.Build
 }

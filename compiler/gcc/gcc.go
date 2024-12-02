@@ -13,13 +13,14 @@ import (
 // - `-xc -E -v -`
 // - `-xc++ -E -v -`
 type Ver struct {
-	FullVersion    string       `json:"full-version" yaml:"full-version"`
-	Version        string       `json:"version" yaml:"version"`
-	Target         triplet.Full `json:"target" yaml:"target"`
-	ThreadModel    string       `json:"thread-model" yaml:"thread-model"`
-	CCIncludeDirs  []string     `json:"cc-include-dirs" yaml:"cc-include-dirs"`
-	CXXIncludeDirs []string     `json:"cxx-include-dirs" yaml:"cxx-include-dirs"`
-	Languages      []string     `json:"languages,omitempty" yaml:"languages,omitempty"`
+	FullVersion     string       `json:"full-version" yaml:"full-version"`
+	Version         string       `json:"version" yaml:"version"`
+	Target          triplet.Full `json:"target" yaml:"target"`
+	ThreadModel     string       `json:"thread-model" yaml:"thread-model"`
+	CCIncludeDirs   []string     `json:"cc-include-dirs" yaml:"cc-include-dirs"`
+	CXXIncludeDirs  []string     `json:"cxx-include-dirs" yaml:"cxx-include-dirs"`
+	Languages       []string     `json:"languages,omitempty" yaml:"languages,omitempty"`
+	ToolchainPrefix string       `json:"toolchain-prefix,omitempty" yaml:"toolchain-prefix,omitempty"`
 }
 
 type Installation struct {
@@ -29,7 +30,9 @@ type Installation struct {
 
 func (i *Installation) PrintSummary(w io.Writer) {
 	fmt.Fprintf(w, "gcc %s\n", i.Version)
-	fmt.Fprintf(w, "- full version: '%s'\n", i.FullVersion)
+	if i.ToolchainPrefix != "" {
+		fmt.Fprintf(w, "- toolchain prefix: '%s'\n", i.ToolchainPrefix)
+	}
 	fmt.Fprintf(w, "- target: %s\n", i.Target.Original)
 	fmt.Fprintf(w, "  - os: %s\n", i.Target.OS)
 	fmt.Fprintf(w, "  - arch: %s\n", i.Target.Arch)

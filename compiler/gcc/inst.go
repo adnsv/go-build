@@ -3,6 +3,7 @@ package gcc
 import (
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"regexp"
 	"sort"
@@ -19,6 +20,20 @@ func DiscoverInstallations(feedback func(string)) []*Installation {
 		feedback("discovering gcc installations")
 	}
 
+	// First check environment variables
+	if envCompiler := getCompilerFromEnv(); envCompiler != "" {
+		if feedback != nil {
+			feedback(fmt.Sprintf("checking compiler from environment: %s", envCompiler))
+		}
+		if ver, err := QueryVersion(envCompiler); err == nil {
+			inst := &Installation{Ver: *ver}
+			inst.CCompiler.OtherPaths = []string{envCompiler}
+			inst.CCompiler.ChoosePrimaryCCompilerPath(inst.Target.Original, "gcc", inst.Version, ToolNames)
+			return []*Installation{inst}
+		}
+	}
+
+	// Then search in PATH
 	files := filesystem.SearchFilesAndSymlinks(filepath.SplitList(os.Getenv("PATH")),
 		func(fi os.FileInfo) bool {
 			fn := fi.Name()
@@ -40,14 +55,21 @@ func DiscoverInstallations(feedback func(string)) []*Installation {
 		return nil
 	}
 
-	// group things together if they report the same signature size + version
+	// Group compilers by their signature
 	vcs := map[string]*vcollect{}
 	for fn, symlinks := range files {
 		ver, err := QueryVersion(fn)
 		if err != nil {
 			continue
 		}
-		sigstr := ver.FullVersion + ver.Version + ver.Target.Original + ver.ThreadModel +
+
+		// Extract toolchain prefix
+		prefix := detectToolchainPrefix(fn)
+		if prefix != "" {
+			ver.ToolchainPrefix = prefix
+		}
+
+		sigstr := ver.Version + ver.Target.Original + ver.ThreadModel +
 			strings.Join(ver.CCIncludeDirs, "|") + "#" +
 			strings.Join(ver.CXXIncludeDirs, "|")
 
@@ -66,7 +88,7 @@ func DiscoverInstallations(feedback func(string)) []*Installation {
 		vcs[sigstr] = vc
 	}
 
-	// collect results
+	// Collect results
 	ret := []*Installation{}
 	for _, vc := range vcs {
 		if vc.ver == nil {
@@ -74,16 +96,16 @@ func DiscoverInstallations(feedback func(string)) []*Installation {
 		}
 		inst := &Installation{Ver: *vc.ver}
 		for v := range vc.files {
-			inst.CCompiler.OtherPaths = append(inst.CCompiler.OtherPaths, v)
+			inst.CCompiler.OtherPaths = append(inst.CCompiler.OtherPaths, fixWSLPath(v))
 		}
 		for v := range vc.symlinks {
-			inst.CCompiler.SymLinks = append(inst.CCompiler.SymLinks, v)
+			inst.CCompiler.SymLinks = append(inst.CCompiler.SymLinks, fixWSLPath(v))
 		}
 		inst.CCompiler.ChoosePrimaryCCompilerPath(inst.Target.Original, "gcc", inst.Version, ToolNames)
 		ret = append(ret, inst)
 	}
 
-	// sort, latest versions first
+	// Sort, latest versions first
 	sort.SliceStable(ret, func(i, j int) bool {
 		v1, e1 := semver.ParseTolerant(ret[i].Ver.Version)
 		v2, e2 := semver.ParseTolerant(ret[j].Ver.Version)
@@ -103,8 +125,38 @@ func DiscoverInstallations(feedback func(string)) []*Installation {
 	return ret
 }
 
+func getCompilerFromEnv() string {
+	if cc := os.Getenv("CC"); cc != "" {
+		if path, err := exec.LookPath(cc); err == nil {
+			return path
+		}
+	}
+	return ""
+}
+
+func detectToolchainPrefix(compilerPath string) string {
+	base := filepath.Base(compilerPath)
+	if match := regexp.MustCompile(`^(.*-)gcc`).FindStringSubmatch(base); len(match) > 1 {
+		// Remove llvm- prefix if present
+		prefix := match[1]
+		prefix = strings.TrimPrefix(prefix, "llvm-")
+		return prefix
+	}
+	return ""
+}
+
 type vcollect struct {
 	files    map[string]struct{}
 	symlinks map[string]struct{}
 	ver      *Ver
+}
+
+// fixWSLPath converts WSL paths (/mnt/c/...) to Windows paths (C:/...)
+func fixWSLPath(p string) string {
+	if strings.HasPrefix(p, "/mnt/") {
+		drive := string(p[5])
+		rest := p[6:]
+		return drive + ":" + rest
+	}
+	return p
 }
