@@ -52,7 +52,10 @@ func QueryVersion(exe string) (*Ver, error) {
 		}
 		match = reTarget.FindStringSubmatch(output)
 		if len(match) == 2 {
-			ret.Target = triplet.ParseFull(strings.TrimSpace(match[1]))
+			target, err := triplet.ParseFull(strings.TrimSpace(match[1]))
+			if err == nil {
+				ret.Target = target
+			}
 		}
 		match = reThreadModel.FindStringSubmatch(output)
 		if len(match) == 2 {
